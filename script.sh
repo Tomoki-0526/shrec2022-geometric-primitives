@@ -1,5 +1,5 @@
 #!/bin/bash
-DATASET_PATH='/media/ivan/a68c0147-4423-4f62-8e54-388f4ace9ec54/Datasets/SHREC2022/dataset/test'
+DATASET_PATH='/home/szj/shrec2022-geometric-primitives/data'
 BIM_TYPE=$(wc -l < $1)
 
 for i in $(find $DATASET_PATH -name '*.txt');

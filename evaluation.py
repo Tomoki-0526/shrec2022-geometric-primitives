@@ -38,6 +38,8 @@ def normalize2(points, unit_ball = False):
     return normalized_points, center, scale
 
 def fit_plane():
+    f.write(str(1)+'\n')
+
     #print('Shape is a plane')
     network = PointNetPlane()
     network.load_state_dict(torch.load("networks/plane.pth"))
@@ -62,6 +64,8 @@ def fit_plane():
     #print(f'Parameters: {pred_normal}->{pred_point}')
 
 def fit_cylinder():
+    f.write(str(2)+'\n')
+
     #print('Shape is a cylinder')
     network = PointNetCylinder()
     network.load_state_dict(torch.load("networks/cylinder.pth"))
@@ -89,6 +93,8 @@ def fit_cylinder():
     #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
 
 def fit_sphere():
+    f.write(str(3)+'\n')
+
     #print('Shape is a sphere')
     network = PointNetSphere()
     network.load_state_dict(torch.load("networks/sphere.pth"))
@@ -110,6 +116,8 @@ def fit_sphere():
     #print(f'Parameters: {pred_point}->{pred_radius}')
 
 def fit_cone():
+    f.write(str(4)+'\n')
+
     #print('Shape is a cone')
     network = PointNetCone()
     network.load_state_dict(torch.load("networks/cone.pth"))
@@ -136,6 +144,8 @@ def fit_cone():
     #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
 
 def fit_torus():
+    f.write(str(5)+'\n')
+
     #print('Shape is a torus')
     network = PointNetTorus()
     network.load_state_dict(torch.load("networks/torus.pth"))
@@ -200,8 +210,6 @@ classifier.cpu()
 
 bim_type = opt.type
 with open(os.path.join(opt.outf, output_filename), 'wt') as f:
-    f.write(str(pred_choice+1)+'\n')
-
     if bim_type in ['wall', 'column', 'curtainwall']:
         if pred_choice == 0:
             fit_plane()

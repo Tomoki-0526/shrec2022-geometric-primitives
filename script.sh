@@ -1,6 +1,6 @@
 #!/bin/bash
 DATASET_PATH='/home/szj/shrec2022-geometric-primitives/data'
-BIM_TYPE=$(wc -l < $1)
+BIM_TYPE=$1
 
 for i in $(find $DATASET_PATH -name '*.txt');
 do

@@ -37,9 +37,138 @@ def normalize2(points, unit_ball = False):
 
     return normalized_points, center, scale
 
+def fit_plane():
+    #print('Shape is a plane')
+    network = PointNetPlane()
+    network.load_state_dict(torch.load("networks/plane.pth"))
+    network.cuda()
+
+    network = network.eval()
+    pred_normal, pred_point = network(input_pt)
+
+    pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
+    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+
+    pred_point = pred_point*scale + center
+    mag = LA.norm(pred_normal)
+    pred_normal = pred_normal/mag
+
+    f.write(str(pred_normal[0])+'\n')
+    f.write(str(pred_normal[1])+'\n')
+    f.write(str(pred_normal[2])+'\n')
+    f.write(str(pred_point[0])+'\n')
+    f.write(str(pred_point[1])+'\n')
+    f.write(str(pred_point[2])+'\n')
+    #print(f'Parameters: {pred_normal}->{pred_point}')
+
+def fit_cylinder():
+    #print('Shape is a cylinder')
+    network = PointNetCylinder()
+    network.load_state_dict(torch.load("networks/cylinder.pth"))
+    network.cuda()
+
+    network = network.eval()
+    pred_normal, pred_point, pred_radius = network(input_pt)
+
+    pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
+    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+    pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
+
+    pred_point = pred_point*scale + center
+    mag = LA.norm(pred_normal)
+    pred_normal = pred_normal/mag
+    pred_radius = pred_radius*scale
+
+    f.write(str(pred_radius)+'\n')
+    f.write(str(pred_normal[0])+'\n')
+    f.write(str(pred_normal[1])+'\n')
+    f.write(str(pred_normal[2])+'\n')
+    f.write(str(pred_point[0])+'\n')
+    f.write(str(pred_point[1])+'\n')
+    f.write(str(pred_point[2])+'\n')
+    #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
+
+def fit_sphere():
+    #print('Shape is a sphere')
+    network = PointNetSphere()
+    network.load_state_dict(torch.load("networks/sphere.pth"))
+    network.cuda()
+
+    network = network.eval()
+    pred_point, pred_radius = network(input_pt)
+
+    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+    pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
+
+    pred_point = pred_point*scale + center
+    pred_radius = pred_radius*scale
+
+    f.write(str(pred_radius)+'\n')
+    f.write(str(pred_point[0])+'\n')
+    f.write(str(pred_point[1])+'\n')
+    f.write(str(pred_point[2])+'\n')
+    #print(f'Parameters: {pred_point}->{pred_radius}')
+
+def fit_cone():
+    #print('Shape is a cone')
+    network = PointNetCone()
+    network.load_state_dict(torch.load("networks/cone.pth"))
+    network.cuda()
+
+    network = network.eval()
+    pred_normal, pred_point, pred_aperture = network(input_pt)
+
+    pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
+    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+    pred_aperture = torch.squeeze(pred_aperture).cpu().detach().numpy()
+
+    pred_point = pred_point*scale + center
+    mag = LA.norm(pred_normal)
+    pred_normal = pred_normal/mag
+
+    f.write(str(pred_aperture)+'\n')
+    f.write(str(pred_normal[0])+'\n')
+    f.write(str(pred_normal[1])+'\n')
+    f.write(str(pred_normal[2])+'\n')
+    f.write(str(pred_point[0])+'\n')
+    f.write(str(pred_point[1])+'\n')
+    f.write(str(pred_point[2])+'\n')
+    #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
+
+def fit_torus():
+    #print('Shape is a torus')
+    network = PointNetTorus()
+    network.load_state_dict(torch.load("networks/torus.pth"))
+    network.cuda()
+
+    network = network.eval()
+    pred_normal, pred_point, pred_min, pred_max = network(input_pt)
+
+    pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
+    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+    pred_min = torch.squeeze(pred_min).cpu().detach().numpy()
+    pred_max = torch.squeeze(pred_max).cpu().detach().numpy()
+
+    pred_point = pred_point*scale + center
+    mag = LA.norm(pred_normal)
+    pred_normal = pred_normal/mag
+    pred_min = pred_min*scale
+    pred_max = pred_max*scale
+
+    f.write(str(pred_max)+'\n')
+    f.write(str(pred_min)+'\n')
+    f.write(str(pred_normal[0])+'\n')
+    f.write(str(pred_normal[1])+'\n')
+    f.write(str(pred_normal[2])+'\n')
+    f.write(str(pred_point[0])+'\n')
+    f.write(str(pred_point[1])+'\n')
+    f.write(str(pred_point[2])+'\n')
+    #print(f'Parameters: {pred_normal}->{pred_point}->{pred_min}->{pred_max}')
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--file', type=str, default='', help='input file')
-parser.add_argument('--outf', type=str, default='', help='output folder')
+parser.add_argument('--file', type=str, default='', required=True, help='input file')
+parser.add_argument('--outf', type=str, default='', required=True, help='output folder')
+parser.add_argument('--type', type=str, default='', required=True, help='bim type')
 
 opt = parser.parse_args()
 
@@ -65,143 +194,26 @@ input_pt = input_pt.transpose(2, 1)
 input_pt = input_pt.cuda().float()
 classifier = classifier.eval()
 pred, trans, trans_feat = classifier(input_pt)
-pred_choice = pred.detach().max(1)[1].cpu().numpy()[0]
+pred_choice = pred.detach().max(1)[1].cpu().numpy()[0]  # 0-plane; 1-cylinder; 2-shpere; 3-cone; 4-torus
 
 classifier.cpu()
 
+bim_type = opt.type
 with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     f.write(str(pred_choice+1)+'\n')
 
-    if pred_choice==0: #Plane
-        #print('Shape is a plane')
-        network = PointNetPlane()
-        network.load_state_dict(torch.load("networks/plane.pth"))
-        network.cuda()
-
-        network = network.eval()
-        pred_normal, pred_point = network(input_pt)
-    
-        pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
-        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
-
-        pred_point = pred_point*scale + center
-        mag = LA.norm(pred_normal)
-        pred_normal = pred_normal/mag
-
-        f.write(str(pred_normal[0])+'\n')
-        f.write(str(pred_normal[1])+'\n')
-        f.write(str(pred_normal[2])+'\n')
-        f.write(str(pred_point[0])+'\n')
-        f.write(str(pred_point[1])+'\n')
-        f.write(str(pred_point[2])+'\n')
-        
-    
-        #print(f'Parameters: {pred_normal}->{pred_point}')
-    elif pred_choice==1: #Cylinder
-        #print('Shape is a cylinder')
-        network = PointNetCylinder()
-        network.load_state_dict(torch.load("networks/cylinder.pth"))
-        network.cuda()
-
-        network = network.eval()
-        pred_normal, pred_point, pred_radius = network(input_pt)
-
-        pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
-        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
-        pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
-
-        pred_point = pred_point*scale + center
-        mag = LA.norm(pred_normal)
-        pred_normal = pred_normal/mag
-        pred_radius = pred_radius*scale
-
-        f.write(str(pred_radius)+'\n')
-        f.write(str(pred_normal[0])+'\n')
-        f.write(str(pred_normal[1])+'\n')
-        f.write(str(pred_normal[2])+'\n')
-        f.write(str(pred_point[0])+'\n')
-        f.write(str(pred_point[1])+'\n')
-        f.write(str(pred_point[2])+'\n')
-
-   
-        #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
-    elif pred_choice==2: #Sphere
-        #print('Shape is a sphere')
-        network = PointNetSphere()
-        network.load_state_dict(torch.load("networks/sphere.pth"))
-        network.cuda()
-
-        network = network.eval()
-        pred_point, pred_radius = network(input_pt)
-
-        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
-        pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
-    
-        pred_point = pred_point*scale + center
-        pred_radius = pred_radius*scale
-
-        f.write(str(pred_radius)+'\n')
-        f.write(str(pred_point[0])+'\n')
-        f.write(str(pred_point[1])+'\n')
-        f.write(str(pred_point[2])+'\n')
-
-        #print(f'Parameters: {pred_point}->{pred_radius}')
-    elif pred_choice==3: #Cone
-        #print('Shape is a cone')
-        network = PointNetCone()
-        network.load_state_dict(torch.load("networks/cone.pth"))
-        network.cuda()
-
-        network = network.eval()
-        pred_normal, pred_point, pred_aperture = network(input_pt)
-
-        pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
-        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
-        pred_aperture = torch.squeeze(pred_aperture).cpu().detach().numpy()
-
-        pred_point = pred_point*scale + center
-        mag = LA.norm(pred_normal)
-        pred_normal = pred_normal/mag
-
-        f.write(str(pred_aperture)+'\n')
-        f.write(str(pred_normal[0])+'\n')
-        f.write(str(pred_normal[1])+'\n')
-        f.write(str(pred_normal[2])+'\n')
-        f.write(str(pred_point[0])+'\n')
-        f.write(str(pred_point[1])+'\n')
-        f.write(str(pred_point[2])+'\n')
-    
-        #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
-    elif pred_choice==4: # Torus
-        #print('Shape is a torus')
-        network = PointNetTorus()
-        network.load_state_dict(torch.load("networks/torus.pth"))
-        network.cuda()
-
-        network = network.eval()
-        pred_normal, pred_point, pred_min, pred_max = network(input_pt)
-
-        pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
-        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
-        pred_min = torch.squeeze(pred_min).cpu().detach().numpy()
-        pred_max = torch.squeeze(pred_max).cpu().detach().numpy()
-
-        pred_point = pred_point*scale + center
-        mag = LA.norm(pred_normal)
-        pred_normal = pred_normal/mag
-        pred_min = pred_min*scale
-        pred_max = pred_max*scale
-
-        f.write(str(pred_max)+'\n')
-        f.write(str(pred_min)+'\n')
-        f.write(str(pred_normal[0])+'\n')
-        f.write(str(pred_normal[1])+'\n')
-        f.write(str(pred_normal[2])+'\n')
-        f.write(str(pred_point[0])+'\n')
-        f.write(str(pred_point[1])+'\n')
-        f.write(str(pred_point[2])+'\n')
-
-        #print(f'Parameters: {pred_normal}->{pred_point}->{pred_min}->{pred_max}')
+    if bim_type in ['wall', 'column', 'curtainwall']:
+        if pred_choice == 0:
+            fit_plane()
+        else:
+            fit_cylinder()
+    elif bim_type in ['pipe']:
+        if pred_choice == 0:
+            fit_plane()
+        elif pred_choice == 4:
+            fit_torus()
+        else:
+            fit_cylinder()    
 
 t2 = time()
 print(f'{output_filename} {(t2-t1)}')

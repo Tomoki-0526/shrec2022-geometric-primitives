@@ -184,7 +184,7 @@ opt = parser.parse_args()
 
 #generate output filename
 filename = opt.file
-output_filename = filename.split('/')[-1].split('.')[0]
+output_filename = os.path.splitext(os.path.split(filename)[1])[0]
 output_filename = output_filename+'_prediction.txt'
 
 t1 = time()

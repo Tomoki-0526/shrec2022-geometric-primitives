@@ -38,7 +38,7 @@ def normalize2(points, unit_ball = False):
     return normalized_points, center, scale
 
 def fit_plane():
-    f.write(str(1)+'\n')
+    f.write(str(0)+'\n')
 
     #print('Shape is a plane')
     network = PointNetPlane()
@@ -62,6 +62,29 @@ def fit_plane():
     f.write(str(pred_point[1])+'\n')
     f.write(str(pred_point[2])+'\n')
     #print(f'Parameters: {pred_normal}->{pred_point}')
+
+def fit_sphere():
+    f.write(str(1)+'\n')
+
+    #print('Shape is a sphere')
+    network = PointNetSphere()
+    network.load_state_dict(torch.load("networks/sphere.pth", weights_only=True))
+    network.cuda()
+
+    network = network.eval()
+    pred_point, pred_radius = network(input_pt)
+
+    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+    pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
+
+    pred_point = pred_point*scale + center
+    pred_radius = pred_radius*scale
+
+    f.write(str(pred_radius)+'\n')
+    f.write(str(pred_point[0])+'\n')
+    f.write(str(pred_point[1])+'\n')
+    f.write(str(pred_point[2])+'\n')
+    #print(f'Parameters: {pred_point}->{pred_radius}')
 
 def fit_cylinder():
     f.write(str(2)+'\n')
@@ -92,31 +115,8 @@ def fit_cylinder():
     f.write(str(pred_point[2])+'\n')
     #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
 
-def fit_sphere():
-    f.write(str(3)+'\n')
-
-    #print('Shape is a sphere')
-    network = PointNetSphere()
-    network.load_state_dict(torch.load("networks/sphere.pth", weights_only=True))
-    network.cuda()
-
-    network = network.eval()
-    pred_point, pred_radius = network(input_pt)
-
-    pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
-    pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
-
-    pred_point = pred_point*scale + center
-    pred_radius = pred_radius*scale
-
-    f.write(str(pred_radius)+'\n')
-    f.write(str(pred_point[0])+'\n')
-    f.write(str(pred_point[1])+'\n')
-    f.write(str(pred_point[2])+'\n')
-    #print(f'Parameters: {pred_point}->{pred_radius}')
-
 def fit_cone():
-    f.write(str(4)+'\n')
+    f.write(str(3)+'\n')
 
     #print('Shape is a cone')
     network = PointNetCone()
@@ -144,7 +144,7 @@ def fit_cone():
     #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
 
 def fit_torus():
-    f.write(str(5)+'\n')
+    f.write(str(4)+'\n')
 
     #print('Shape is a torus')
     network = PointNetTorus()

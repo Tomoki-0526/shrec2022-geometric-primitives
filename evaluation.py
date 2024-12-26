@@ -42,7 +42,7 @@ def fit_plane():
 
     #print('Shape is a plane')
     network = PointNetPlane()
-    network.load_state_dict(torch.load("networks/plane.pth"))
+    network.load_state_dict(torch.load("networks/plane.pth", weights_only=True))
     network.cuda()
 
     network = network.eval()
@@ -68,7 +68,7 @@ def fit_cylinder():
 
     #print('Shape is a cylinder')
     network = PointNetCylinder()
-    network.load_state_dict(torch.load("networks/cylinder.pth"))
+    network.load_state_dict(torch.load("networks/cylinder.pth", weights_only=True))
     network.cuda()
 
     network = network.eval()
@@ -97,7 +97,7 @@ def fit_sphere():
 
     #print('Shape is a sphere')
     network = PointNetSphere()
-    network.load_state_dict(torch.load("networks/sphere.pth"))
+    network.load_state_dict(torch.load("networks/sphere.pth", weights_only=True))
     network.cuda()
 
     network = network.eval()
@@ -120,7 +120,7 @@ def fit_cone():
 
     #print('Shape is a cone')
     network = PointNetCone()
-    network.load_state_dict(torch.load("networks/cone.pth"))
+    network.load_state_dict(torch.load("networks/cone.pth", weights_only=True))
     network.cuda()
 
     network = network.eval()
@@ -148,7 +148,7 @@ def fit_torus():
 
     #print('Shape is a torus')
     network = PointNetTorus()
-    network.load_state_dict(torch.load("networks/torus.pth"))
+    network.load_state_dict(torch.load("networks/torus.pth", weights_only=True))
     network.cuda()
 
     network = network.eval()

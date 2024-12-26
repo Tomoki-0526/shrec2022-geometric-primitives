@@ -128,7 +128,7 @@ for epoch in range(opt.nepoch):
     #Validation after one epoch
     running_loss = 0
     running_cos = 0
-    running_l2
+    running_l2 = 0
     running_point = 0
     running_min = 0
     running_max = 0
@@ -193,7 +193,7 @@ maxs = []
 cont = 0
 
 for i,data in tqdm(enumerate(testdataloader, 0)):
-    target_normal, target_center, target_min, target_max points = data
+    target_normal, target_center, target_min, target_max, points = data
     points = points.transpose(2, 1)
     points, target_normal = points.cuda().float(), target_normal.cuda().float()
     target_center, target_min, target_max = target_center.cuda().float(), target_min.cuda().float(), target_max.cuda().float()

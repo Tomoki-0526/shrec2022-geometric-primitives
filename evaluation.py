@@ -7,7 +7,7 @@ from numpy import linalg as LA
 import random
 import math
 import argparse
-from model import PointNetCls, PointNetPlane, PointNetCylinder, PointNetSphere, PointNetCone, PointNetTorus
+from pointnet import PointNetCls, PointNetPlane, PointNetCylinder, PointNetSphere, PointNetCone, PointNetTorus
 from time import time
 
 def resample_pcd(pcd, n):

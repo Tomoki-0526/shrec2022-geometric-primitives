@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCylinder
-from pointnet import PointNetCylinder
+from model.pointnet import PointNetCylinder
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom

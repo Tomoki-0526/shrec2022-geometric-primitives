@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSHREC2022
-from model.pointnet import PointNetCls, feature_transform_regularizer
+from model.pointnet2 import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -46,30 +46,7 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-if opt.dataset_type == 'shapenet':
-    dataset = ShapeNetDataset(
-        root=opt.dataset,
-        classification=True,
-        npoints=opt.num_points)
-
-    test_dataset = ShapeNetDataset(
-        root=opt.dataset,
-        classification=True,
-        split='test',
-        npoints=opt.num_points,
-        data_augmentation=False)
-elif opt.dataset_type == 'modelnet40':
-    dataset = ModelNetDataset(
-        root=opt.dataset,
-        npoints=opt.num_points,
-        split='trainval')
-
-    test_dataset = ModelNetDataset(
-        root=opt.dataset,
-        split='test',
-        npoints=opt.num_points,
-        data_augmentation=False)
-elif opt.dataset_type == 'shrec2022':
+if opt.dataset_type == 'shrec2022':
     dataset = DatasetSHREC2022(
         root=opt.dataset,
         npoints=opt.num_points,

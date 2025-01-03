@@ -19,7 +19,7 @@ def vis_curve(curve, window, name, vis):
                  win=window,
                  opts=dict(title=name, legend=[name + "_curve"], markersize=2, ), )
 
-vis = visdom.Visdom(port = 8997, env="TRAIN")
+vis = visdom.Visdom(port = 8097, env="TRAIN")
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

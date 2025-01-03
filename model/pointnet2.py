@@ -153,8 +153,7 @@ class PointNetCls(nn.Module):
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
-        x = F.log_softmax(x, dim=1)
-        return x, trans_feat
+        return F.log_softmax(x, dim=1), trans, trans_feat
     
 
 # Network for plane regression

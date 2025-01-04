@@ -71,3 +71,7 @@ To generate the output for the entire test set, we provide a bash file which can
 ~~~
 
 You must change the input and output path inside the bash script, according to your dataset.
+
+## Note
+
++ cls_model_249.pth: acc=0.9476086956521739

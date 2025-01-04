@@ -32,7 +32,7 @@ parser.add_argument(
     '--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
-# parser.add_argument('--dataset', type=str, required=True, help="dataset path")
+parser.add_argument('--dataset', type=str, required=True, help="dataset path")
 
 opt = parser.parse_args()
 print(opt)
@@ -45,12 +45,12 @@ random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
 dataset = DatasetPlane(
-        root="/home/szj/SHREC2022/dataset/training",
+        root=opt.dataset,
         npoints=opt.num_points,
         split='train')
 
 test_dataset = DatasetPlane(
-        root="/home/szj/SHREC2022/dataset/training",
+        root=opt.dataset,
         split='val',
         npoints=opt.num_points)
 

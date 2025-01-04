@@ -1,5 +1,5 @@
 #!/bin/bash
-DATASET_PATH='/media/ivan/a68c0147-4423-4f62-8e54-388f4ace9ec54/Datasets/SHREC2022/dataset/test'
+DATASET_PATH='/home/szj/SHREC2022/dataset/test/pointCloud'
 
 for i in $(find $DATASET_PATH -name '*.txt');
 do

@@ -58,7 +58,7 @@ input_pt, center, scale = normalize2(pcd, unit_ball=True)
 input_pt = torch.unsqueeze(torch.from_numpy(input_pt), 0)
 
 classifier = PointNetCls(k=5, feature_transform=False)
-classifier.load_state_dict(torch.load('networks/pointnet2/cls_model_249.pth'))
+classifier.load_state_dict(torch.load('.mytrain/classification/cls_model_249.pth'))
 classifier.cuda()
 
 input_pt = input_pt.transpose(2, 1)

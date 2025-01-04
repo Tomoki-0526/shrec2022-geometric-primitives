@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCylinder
-from model.pointnet import PointNetCylinder
+from model.pointnet2 import PointNetCylinder
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -20,7 +20,7 @@ def vis_curve(curve, window, name, vis):
                  win=window,
                  opts=dict(title=name, legend=[name + "_curve"], markersize=2, ), )
 
-vis = visdom.Visdom(port = 8997, env="TRAIN")
+vis = visdom.Visdom(port = 8097, env="TRAIN")
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -46,12 +46,12 @@ random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
 dataset = DatasetCylinder(
-        root="/media/ivan/a68c0147-4423-4f62-8e54-388f4ace9ec54/Datasets/SHREC2022/dataset/training",
+        root="/home/szj/SHREC2022/dataset/training",
         npoints=opt.num_points,
         split='train')
 
 test_dataset = DatasetCylinder(
-        root="/media/ivan/a68c0147-4423-4f62-8e54-388f4ace9ec54/Datasets/SHREC2022/dataset/training",
+        root="/home/szj/SHREC2022/dataset/training",
         split='val',
         npoints=opt.num_points)
 

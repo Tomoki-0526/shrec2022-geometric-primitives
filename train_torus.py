@@ -143,7 +143,7 @@ for epoch in range(opt.nepoch):
         target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
         
         optimizer.zero_grad()
-        classifier = classifier.train()
+        classifier = classifier.eval()
         
         pred_normal, pred_point, pred_radius_min, pred_radius_max = classifier(points)
         lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8))

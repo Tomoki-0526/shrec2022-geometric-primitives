@@ -76,3 +76,13 @@ You must change the input and output path inside the bash script, according to y
 
 + cls_model_249.pth: acc=0.9476086956521739
 + plane_model_249.pth: final loss 0.9986141111215819
++ cylinder_model_249.pth: 
+    + average angle error 46.051755106376035
+    + average point error 0.5126345917415481
+    + average radii error 0.2773729526154373
++ sphere_model_249.pth:
+    + final accuracy 0.09187446610722753
+    + average center error 0.1066776765497786
+    + average radius error 0.18748403586771178
++ cone_model_249.pth:
++ torus_model_249.pth:

@@ -75,7 +75,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     if pred_choice==0: #Plane
         #print('Shape is a plane')
         network = PointNetPlane()
-        network.load_state_dict(torch.load("networks/plane.pth"))
+        network.load_state_dict(torch.load(".mytrain/plane/plane_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -100,7 +100,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==1: #Cylinder
         #print('Shape is a cylinder')
         network = PointNetCylinder()
-        network.load_state_dict(torch.load("networks/cylinder.pth"))
+        network.load_state_dict(torch.load(".mytrain/cylinder/cylinder_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -128,7 +128,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==2: #Sphere
         #print('Shape is a sphere')
         network = PointNetSphere()
-        network.load_state_dict(torch.load("networks/sphere.pth"))
+        network.load_state_dict(torch.load(".mytrain/sphere/sphere_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -149,7 +149,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==3: #Cone
         #print('Shape is a cone')
         network = PointNetCone()
-        network.load_state_dict(torch.load("networks/cone.pth"))
+        network.load_state_dict(torch.load(".mytrain/cone/cone_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -175,7 +175,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
         network = PointNetTorus()
-        network.load_state_dict(torch.load("networks/torus.pth"))
+        network.load_state_dict(torch.load(".mytrain/torus/torus_model_249.pth"))
         network.cuda()
 
         network = network.eval()

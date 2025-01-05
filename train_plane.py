@@ -93,12 +93,12 @@ for epoch in range(opt.nepoch):
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
         target, points = data
-        points = points.transpose(2, 1)
+        points = points[0].transpose(2, 1)
         points, target = points.cuda().float(), target.cuda().float()
         optimizer.zero_grad()
         classifier = classifier.train()
         pred = classifier(points)
-        loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
+        loss = 1.0 - torch.pow(F.cosine_similarity(pred[0], target),9)
         loss.mean().backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
@@ -112,11 +112,11 @@ for epoch in range(opt.nepoch):
     for i,data in tqdm(enumerate(testdataloader, 0)):
         target, points = data
         #target = target[:, 0]
-        points = points.transpose(2, 1)
+        points = points[0].transpose(2, 1)
         points, target = points.cuda().float(), target.cuda().float()
         classifier = classifier.eval()
         pred = classifier(points)
-        loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
+        loss = 1.0 - torch.pow(F.cosine_similarity(pred[0], target),9)
         running_loss += loss.item()
         cont = cont + 1
     
@@ -130,17 +130,17 @@ cont = 0
 
 for i,data in tqdm(enumerate(testdataloader, 0)):
     target, points = data
-    points = points.transpose(2, 1)
+    points = points[0].transpose(2, 1)
     points, target = points.cuda().float(), target.cuda().float()
     classifier = classifier.eval()
     pred = classifier(points)
     t = np.squeeze(target.detach().cpu().numpy())
-    p = np.squeeze(pred.detach().cpu().numpy())
+    p = np.squeeze(pred[0].detach().cpu().numpy())
     norm_p = np.linalg.norm(p)
     p = p/norm_p
     angle = 180*np.arccos(t.dot(p))/np.pi
     print(f'{t} -> {p}->{angle}')
-    loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
+    loss = 1.0 - torch.pow(F.cosine_similarity(pred[0], target),9)
     running_loss += loss.item()
     cont = cont + 1
     

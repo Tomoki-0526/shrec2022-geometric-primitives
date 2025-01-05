@@ -123,7 +123,7 @@ for epoch in range(opt.nepoch):
     lossTestValues.append(running_loss/float(cont))
     vis_curve(lossTestValues, "test", "test", vis)
 
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+    torch.save(classifier.state_dict(), '%s/plane_model_%d.pth' % (opt.outf, epoch))
 
 running_loss = 0
 cont = 0

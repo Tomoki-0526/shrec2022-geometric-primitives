@@ -165,7 +165,7 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss3, "point", "point", vis)
     vis_curve(lossLoss4, "rad", "rad", vis)
 
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+    torch.save(classifier.state_dict(), '%s/cylinder_model_%d.pth' % (opt.outf, epoch))
 
 
 angle_err = 0

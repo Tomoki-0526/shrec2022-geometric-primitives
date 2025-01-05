@@ -152,7 +152,7 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss1, "lossCenter", "lossCenter", vis)
     vis_curve(lossLoss2, "lossRadius", "lossRadius", vis)
     
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+    torch.save(classifier.state_dict(), '%s/sphere_model_%d.pth' % (opt.outf, epoch))
 
 
 running_loss = 0

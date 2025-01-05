@@ -178,7 +178,7 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss5, "max", "max", vis)
 
 
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+    torch.save(classifier.state_dict(), '%s/torus_model_%d.pth' % (opt.outf, epoch))
 
 
 angle_err = 0

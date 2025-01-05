@@ -75,3 +75,4 @@ You must change the input and output path inside the bash script, according to y
 ## Note
 
 + cls_model_249.pth: acc=0.9476086956521739
++ plane_model_249.pth: final loss 0.9986141111215819

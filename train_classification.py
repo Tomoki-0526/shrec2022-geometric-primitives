@@ -10,16 +10,17 @@ from dataset import DatasetSHREC2022
 from model.pointnet2_ssg import PointNetCls
 import torch.nn.functional as F
 from tqdm import tqdm
-import visdom
 import numpy as np
+import matplotlib.pyplot as plt
 
-def vis_curve(curve, window, name, vis):
-    vis.line(X=np.arange(len(curve)),
-                 Y=np.array(curve),
-                 win=window,
-                 opts=dict(title=name, legend=[name + "_curve"], markersize=2, ), )
-
-vis = visdom.Visdom(port = 8097, env="TRAIN")
+def vis_curve(curve, title, filename):
+    X=np.arange(len(curve))
+    Y=np.array(curve)
+    plt.xlabel('epochs')
+    plt.ylabel('value')
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.savefig(filename)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -90,6 +91,8 @@ classifier.cuda()
 
 num_batch = len(dataset) / opt.batchSize
 
+lossTrain = []
+lossTest = []
 accTrain = []
 accTest = []
 
@@ -108,8 +111,8 @@ for epoch in range(opt.nepoch):
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
         print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
+        lossTrain.append(loss.item())
         accTrain.append(correct.item() / float(opt.batchSize))
-        vis_curve(accTrain, "train", "train", vis)
 
     for i,data in tqdm(enumerate(testdataloader, 0)):
         target, points = data
@@ -121,11 +124,16 @@ for epoch in range(opt.nepoch):
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
         print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
+        lossTest.append(loss.item())
         accTest.append(correct.item()/float(opt.batchSize))
-        vis_curve(accTest, "test", "test", vis)
 
     if epoch == opt.nepoch - 1:
         torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+
+vis_curve(lossTrain, 'classification train loss', os.path.join(opt.outf, 'cls_train_loss.png'))
+vis_curve(accTrain, 'classification train accuracy', os.path.join(opt.outf, 'cls_train_acc.png'))
+vis_curve(lossTest, 'classification test loss', os.path.join(opt.outf, 'cls_test_loss.png'))
+vis_curve(accTest, 'classification test accuracy', os.path.join(opt.outf, 'cls_test_acc.png'))
 
 total_correct = 0
 total_testset = 0

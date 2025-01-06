@@ -10,17 +10,17 @@ from dataset import DatasetCylinder
 from model.pointnet2_ssg import PointNetCylinder
 import torch.nn.functional as F
 from tqdm import tqdm
-import visdom
 import numpy as np
 import matplotlib.pyplot as plt
 
-def vis_curve(curve, window, name, vis):
-    vis.line(X=np.arange(len(curve)),
-                 Y=np.array(curve),
-                 win=window,
-                 opts=dict(title=name, legend=[name + "_curve"], markersize=2, ), )
-
-vis = visdom.Visdom(port = 8097, env="TRAIN")
+def vis_curve(curve, title, filename):
+    X=np.arange(len(curve))
+    Y=np.array(curve)
+    plt.xlabel('epochs')
+    plt.ylabel('value')
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.savefig(filename)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -122,7 +122,6 @@ for epoch in range(opt.nepoch):
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
 
         lossTrainValues.append(loss.mean().item())
-        vis_curve(lossTrainValues, "train", "train", vis)
    
     #Validation after one epoch
     running_loss = 0
@@ -158,16 +157,16 @@ for epoch in range(opt.nepoch):
     lossLoss2.append(running_l2/float(cont))
     lossLoss3.append(running_point/float(cont))
     lossLoss4.append(running_rad/float(cont))
-    
-    vis_curve(lossTestValues, "test", "test", vis)
-    vis_curve(lossLoss1, "cos", "cos", vis)
-    vis_curve(lossLoss2, "l2", "l2", vis)
-    vis_curve(lossLoss3, "point", "point", vis)
-    vis_curve(lossLoss4, "rad", "rad", vis)
 
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/cylinder_model_%d.pth' % (opt.outf, epoch))
+        torch.save(classifier.state_dict(), '%s/cyl_model_%d.pth' % (opt.outf, epoch))
 
+vis_curve(lossTrainValues, 'cylinder train loss', os.path.join(opt.outf, 'cyl_train_loss.png'))
+vis_curve(lossTestValues, 'cylinder test loss - all', os.path.join(opt.outf, 'cyl_test_loss_all.png'))
+vis_curve(lossLoss1, 'cylinder test loss - normal cosine', os.path.join(opt.outf, 'cyl_test_loss_cos.png'))
+vis_curve(lossLoss2, 'cylinder test loss - normal L2', os.path.join(opt.outf, 'cyl_test_loss_l2.png'))
+vis_curve(lossLoss3, 'cylinder test loss - center', os.path.join(opt.outf, 'cyl_test_loss_c.png'))
+vis_curve(lossLoss4, 'cylinder test loss - radius', os.path.join(opt.outf, 'cyl_test_loss_r.png'))
 
 angle_err = 0
 point_err = 0

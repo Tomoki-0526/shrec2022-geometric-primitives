@@ -10,17 +10,17 @@ from dataset import DatasetSphere
 from model.pointnet2_ssg import PointNetSphere
 import torch.nn.functional as F
 from tqdm import tqdm
-import visdom
 import numpy as np
 import matplotlib.pyplot as plt
 
-def vis_curve(curve, window, name, vis):
-    vis.line(X=np.arange(len(curve)),
-                 Y=np.array(curve),
-                 win=window,
-                 opts=dict(title=name, legend=[name + "_curve"], markersize=2, ), )
-
-vis = visdom.Visdom(port = 8097, env="TRAIN")
+def vis_curve(curve, title, filename):
+    X=np.arange(len(curve))
+    Y=np.array(curve)
+    plt.xlabel('epochs')
+    plt.ylabel('value')
+    plt.plot(X, Y)
+    plt.title(title)
+    plt.savefig(filename)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -114,7 +114,6 @@ for epoch in range(opt.nepoch):
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
 
         lossTrainValues.append(loss.mean().item())
-        vis_curve(lossTrainValues, "train", "train", vis)
 
     #Validation after one epoch
     running_loss = 0
@@ -147,14 +146,13 @@ for epoch in range(opt.nepoch):
     lossLoss1.append(runningCenter/float(cont))
     lossLoss2.append(runningRadius/float(cont))
     
-    
-    vis_curve(lossTestValues, "test", "test", vis)
-    vis_curve(lossLoss1, "lossCenter", "lossCenter", vis)
-    vis_curve(lossLoss2, "lossRadius", "lossRadius", vis)
-    
     if epoch == opt.nepoch - 1:
         torch.save(classifier.state_dict(), '%s/sphere_model_%d.pth' % (opt.outf, epoch))
 
+vis_curve(lossTrainValues, 'sphere train loss', os.path.join(opt.outf, 'sph_train_loss.png'))
+vis_curve(lossTestValues, 'sphere test loss - all', os.path.join(opt.outf, 'sph_test_loss_all.png'))
+vis_curve(lossLoss1, 'sphere test loss - center', os.path.join(opt.outf, 'sph_test_loss_c.png'))
+vis_curve(lossLoss2, 'sphere test loss - radius', os.path.join(opt.outf, 'sph_test_loss_r.png'))
 
 running_loss = 0
 

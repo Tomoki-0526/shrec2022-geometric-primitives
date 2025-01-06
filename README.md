@@ -72,6 +72,17 @@ To generate the output for the entire test set, we provide a bash file which can
 
 You must change the input and output path inside the bash script, according to your dataset.
 
+## Commands
+
+```bash
+CUDA_VISIBLE_DEVICES=2 python train_classification.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain
+CUDA_VISIBLE_DEVICES=3 python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain
+CUDA_VISIBLE_DEVICES=4 python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain
+CUDA_VISIBLE_DEVICES=5 python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain
+CUDA_VISIBLE_DEVICES=6 python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain
+CUDA_VISIBLE_DEVICES=7 python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain
+```
+
 ## Note
 
 + cls_model_249.pth:

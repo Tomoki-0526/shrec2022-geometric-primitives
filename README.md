@@ -85,4 +85,11 @@ You must change the input and output path inside the bash script, according to y
     + average center error 0.1066776765497786
     + average radius error 0.18748403586771178
 + cone_model_249.pth:
+    + average angle error 7.222895553267898
+    + average point error 0.2496374235918705
+    + average radii error 0.12819170378472494
 + torus_model_249.pth:
+    + average angle error 19.64224902183244
+    + average point error 0.28661336431168427
+    + average min error 0.12813370878929678
+    + average max error 0.20431168367681296

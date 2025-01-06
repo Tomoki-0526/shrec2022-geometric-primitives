@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCone
-from model.pointnet2 import PointNetCone
+from model.pointnet2_ssg import PointNetCone
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -169,7 +169,8 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss3, "vertex", "vertex", vis)
     vis_curve(lossLoss4, "aperture", "aperture", vis)
 
-    torch.save(classifier.state_dict(), '%s/cone_model_%d.pth' % (opt.outf, epoch))
+    if epoch == opt.nepoch - 1:
+        torch.save(classifier.state_dict(), '%s/cone_model_%d.pth' % (opt.outf, epoch))
 
 
 angle_err = 0

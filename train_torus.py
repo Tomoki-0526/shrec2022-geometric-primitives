@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetTorus
-from model.pointnet2 import PointNetTorus
+from model.pointnet2_ssg import PointNetTorus
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -177,8 +177,8 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss4, "min", "min", vis)
     vis_curve(lossLoss5, "max", "max", vis)
 
-
-    torch.save(classifier.state_dict(), '%s/torus_model_%d.pth' % (opt.outf, epoch))
+    if epoch == opt.nepoch - 1:
+        torch.save(classifier.state_dict(), '%s/torus_model_%d.pth' % (opt.outf, epoch))
 
 
 angle_err = 0

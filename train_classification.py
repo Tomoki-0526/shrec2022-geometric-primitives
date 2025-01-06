@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSHREC2022
-from model.pointnet2 import PointNetCls, feature_transform_regularizer
+from model.pointnet2_ssg import PointNetCls
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -34,7 +34,6 @@ parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="dataset path")
 parser.add_argument('--dataset_type', type=str, default='shrec2022', help="dataset type shapenet|modelnet40|shrec2022")
-parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
 opt = parser.parse_args()
 print(opt)
@@ -79,7 +78,7 @@ try:
 except OSError:
     pass
 
-classifier = PointNetCls(k=num_classes, feature_transform=opt.feature_transform)
+classifier = PointNetCls(k=num_classes)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))
@@ -102,10 +101,8 @@ for epoch in range(opt.nepoch):
         points, target = points.cuda().float(), target.cuda()
         optimizer.zero_grad()
         classifier = classifier.train()
-        pred, trans, trans_feat = classifier(points)
+        pred, _ = classifier(points)
         loss = F.nll_loss(pred, target)
-        if opt.feature_transform:
-            loss += feature_transform_regularizer(trans_feat) * 0.001
         loss.backward()
         optimizer.step()
         pred_choice = pred.data.max(1)[1]
@@ -119,7 +116,7 @@ for epoch in range(opt.nepoch):
         points = points.transpose(2, 1)
         points, target = points.cuda().float(), target.cuda()
         classifier = classifier.eval()
-        pred, _, _ = classifier(points)
+        pred, _ = classifier(points)
         loss = F.nll_loss(pred, target)
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
@@ -127,7 +124,8 @@ for epoch in range(opt.nepoch):
         accTest.append(correct.item()/float(opt.batchSize))
         vis_curve(accTest, "test", "test", vis)
 
-    torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
+    if epoch == opt.nepoch - 1:
+        torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 total_correct = 0
 total_testset = 0
@@ -136,7 +134,7 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     points = points.transpose(2, 1)
     points, target = points.cuda().float(), target.cuda()
     classifier = classifier.eval()
-    pred, _, _ = classifier(points)
+    pred, _ = classifier(points)
     pred_choice = pred.data.max(1)[1]
     correct = pred_choice.eq(target.data).cpu().sum()
     total_correct += correct.item()

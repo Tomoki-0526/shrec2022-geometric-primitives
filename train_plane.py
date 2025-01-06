@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetPlane
-from model.pointnet2 import PointNetPlane
+from model.pointnet2_ssg import PointNetPlane
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -97,8 +97,8 @@ for epoch in range(opt.nepoch):
         points, target = points.cuda().float(), target.cuda().float()
         optimizer.zero_grad()
         classifier = classifier.train()
-        pred = classifier(points)
-        loss = 1.0 - torch.pow(F.cosine_similarity(pred[0], target),9)
+        pred, _ = classifier(points)
+        loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
         loss.mean().backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
@@ -115,15 +115,16 @@ for epoch in range(opt.nepoch):
         points = points[0].transpose(2, 1)
         points, target = points.cuda().float(), target.cuda().float()
         classifier = classifier.eval()
-        pred = classifier(points)
-        loss = 1.0 - torch.pow(F.cosine_similarity(pred[0], target),9)
+        pred, _ = classifier(points)
+        loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
         running_loss += loss.item()
         cont = cont + 1
     
     lossTestValues.append(running_loss/float(cont))
     vis_curve(lossTestValues, "test", "test", vis)
 
-    torch.save(classifier.state_dict(), '%s/plane_model_%d.pth' % (opt.outf, epoch))
+    if epoch == opt.nepoch - 1:
+        torch.save(classifier.state_dict(), '%s/plane_model_%d.pth' % (opt.outf, epoch))
 
 running_loss = 0
 cont = 0
@@ -133,14 +134,14 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     points = points[0].transpose(2, 1)
     points, target = points.cuda().float(), target.cuda().float()
     classifier = classifier.eval()
-    pred = classifier(points)
+    pred, _ = classifier(points)
     t = np.squeeze(target.detach().cpu().numpy())
     p = np.squeeze(pred[0].detach().cpu().numpy())
     norm_p = np.linalg.norm(p)
     p = p/norm_p
     angle = 180*np.arccos(t.dot(p))/np.pi
     print(f'{t} -> {p}->{angle}')
-    loss = 1.0 - torch.pow(F.cosine_similarity(pred[0], target),9)
+    loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
     running_loss += loss.item()
     cont = cont + 1
     

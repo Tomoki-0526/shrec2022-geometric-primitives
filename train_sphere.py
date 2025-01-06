@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSphere
-from model.pointnet2 import PointNetSphere
+from model.pointnet2_ssg import PointNetSphere
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -152,7 +152,8 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss1, "lossCenter", "lossCenter", vis)
     vis_curve(lossLoss2, "lossRadius", "lossRadius", vis)
     
-    torch.save(classifier.state_dict(), '%s/sphere_model_%d.pth' % (opt.outf, epoch))
+    if epoch == opt.nepoch - 1:
+        torch.save(classifier.state_dict(), '%s/sphere_model_%d.pth' % (opt.outf, epoch))
 
 
 running_loss = 0

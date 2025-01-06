@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCylinder
-from model.pointnet2 import PointNetCylinder
+from model.pointnet2_ssg import PointNetCylinder
 import torch.nn.functional as F
 from tqdm import tqdm
 import visdom
@@ -165,7 +165,8 @@ for epoch in range(opt.nepoch):
     vis_curve(lossLoss3, "point", "point", vis)
     vis_curve(lossLoss4, "rad", "rad", vis)
 
-    torch.save(classifier.state_dict(), '%s/cylinder_model_%d.pth' % (opt.outf, epoch))
+    if epoch == opt.nepoch - 1:
+        torch.save(classifier.state_dict(), '%s/cylinder_model_%d.pth' % (opt.outf, epoch))
 
 
 angle_err = 0

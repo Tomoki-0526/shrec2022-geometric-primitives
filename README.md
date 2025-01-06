@@ -15,7 +15,7 @@ In this repository, we provide the trained networks to perform the task. Neverth
 The command to train the classification network is:
 
 ~~~
-python train_classification.py --dataset=<path to training folder> --dataset_type=shrec2022 --outf=<output folder> --feature_transform
+python train_classification.py --dataset=<path to training folder> --dataset_type=shrec2022 --outf=<output folder>
 ~~~
 
 The training loop stores the an intermediate network for each epoch.
@@ -74,22 +74,14 @@ You must change the input and output path inside the bash script, according to y
 
 ## Note
 
-+ cls_model_249.pth: acc=0.9476086956521739
-+ plane_model_249.pth: final loss 0.9986141111215819
++ cls_model_249.pth:
+
++ plane_model_249.pth:
+
 + cylinder_model_249.pth: 
-    + average angle error 46.051755106376035
-    + average point error 0.5126345917415481
-    + average radii error 0.2773729526154373
+
 + sphere_model_249.pth:
-    + final accuracy 0.09187446610722753
-    + average center error 0.1066776765497786
-    + average radius error 0.18748403586771178
+
 + cone_model_249.pth:
-    + average angle error 7.222895553267898
-    + average point error 0.2496374235918705
-    + average radii error 0.12819170378472494
+
 + torus_model_249.pth:
-    + average angle error 19.64224902183244
-    + average point error 0.28661336431168427
-    + average min error 0.12813370878929678
-    + average max error 0.20431168367681296

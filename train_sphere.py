@@ -148,7 +148,7 @@ for epoch in range(opt.nepoch):
     lossLoss2.append(runningRadius/float(cont))
     
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/sphere_model_%d.pth' % (opt.outf, epoch))
+        torch.save(classifier.state_dict(), '%s/sph_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'sphere train loss', os.path.join(opt.outf, 'sph_train_loss.png'))
 vis_curve(lossTestValues, 'sphere test loss - all', os.path.join(opt.outf, 'sph_test_loss_all.png'))

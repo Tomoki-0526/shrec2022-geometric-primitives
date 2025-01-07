@@ -170,7 +170,7 @@ for epoch in range(opt.nepoch):
     lossLoss5.append(running_max/float(cont))
 
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/torus_model_%d.pth' % (opt.outf, epoch))
+        torch.save(classifier.state_dict(), '%s/tor_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'torus train loss', os.path.join(opt.outf, 'tor_train_loss.png'))
 vis_curve(lossTestValues, 'torus test loss - all', os.path.join(opt.outf, 'tor_test_loss_all.png'))

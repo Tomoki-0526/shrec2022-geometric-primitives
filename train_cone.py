@@ -163,14 +163,14 @@ for epoch in range(opt.nepoch):
     lossLoss4.append(running_aper/float(cont))
 
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/cone_model_%d.pth' % (opt.outf, epoch))
+        torch.save(classifier.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
 
-vis_curve(lossTrainValues, 'cone train loss', os.path.join(opt.outf, 'cyl_train_loss.png'))
-vis_curve(lossTestValues, 'cone test loss - all', os.path.join(opt.outf, 'cyl_test_loss_all.png'))
-vis_curve(lossLoss1, 'cone test loss - normal cosine', os.path.join(opt.outf, 'cyl_test_loss_cos.png'))
-vis_curve(lossLoss2, 'cone test loss - normal L2', os.path.join(opt.outf, 'cyl_test_loss_l2.png'))
-vis_curve(lossLoss3, 'cone test loss - vertex', os.path.join(opt.outf, 'cyl_test_loss_vert.png'))
-vis_curve(lossLoss4, 'cone test loss - aperture', os.path.join(opt.outf, 'cyl_test_loss_aper.png'))
+vis_curve(lossTrainValues, 'cone train loss', os.path.join(opt.outf, 'con_train_loss.png'))
+vis_curve(lossTestValues, 'cone test loss - all', os.path.join(opt.outf, 'con_test_loss_all.png'))
+vis_curve(lossLoss1, 'cone test loss - normal cosine', os.path.join(opt.outf, 'con_test_loss_cos.png'))
+vis_curve(lossLoss2, 'cone test loss - normal L2', os.path.join(opt.outf, 'con_test_loss_l2.png'))
+vis_curve(lossLoss3, 'cone test loss - vertex', os.path.join(opt.outf, 'con_test_loss_vert.png'))
+vis_curve(lossLoss4, 'cone test loss - aperture', os.path.join(opt.outf, 'con_test_loss_aper.png'))
 
 angle_err = 0
 point_err = 0

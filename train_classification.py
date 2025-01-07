@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSHREC2022
-from model.pointnet2_msg import PointNetCls
+from model.pointnet2_ssg import PointNetCls
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np

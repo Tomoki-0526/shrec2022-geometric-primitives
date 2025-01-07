@@ -126,7 +126,7 @@ for epoch in range(opt.nepoch):
         torch.save(classifier.state_dict(), '%s/pl_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'plane train loss', os.path.join(opt.outf, 'pl_train_loss.png'))
-vis_curve(lossTestValues, 'plane test loss - all (normal cosine)', os.path.join(opt.outf, 'pl_test_acc_all.png'))
+vis_curve(lossTestValues, 'plane test loss - all (normal cosine)', os.path.join(opt.outf, 'pl_test_loss_all.png'))
 
 running_loss = 0
 cont = 0

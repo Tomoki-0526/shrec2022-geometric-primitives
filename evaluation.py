@@ -1,13 +1,9 @@
 import numpy as np
 import torch
-import torch.utils.data as data
 import os
-import glob
 from numpy import linalg as LA
-import random
-import math
 import argparse
-from model.pointnet2_msg import PointNetCls, PointNetPlane, PointNetCylinder, PointNetSphere, PointNetCone, PointNetTorus
+from model.model import Classifier, PlaneRegressor, CylinderRegressor, SphereRegressor, ConeRegressor, TorusRegressor
 from time import time
 
 def resample_pcd(pcd, n):
@@ -57,7 +53,7 @@ input_pt, center, scale = normalize2(pcd, unit_ball=True)
 #print(f'Center:{center}, Scale: {scale}')
 input_pt = torch.unsqueeze(torch.from_numpy(input_pt), 0)
 
-classifier = PointNetCls(k=5)
+classifier = Classifier(k=5)
 classifier.load_state_dict(torch.load('.mytrain/classification/cls_model_249.pth'))
 classifier.cuda()
 
@@ -74,7 +70,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
 
     if pred_choice==0: #Plane
         #print('Shape is a plane')
-        network = PointNetPlane()
+        network = PlaneRegressor()
         network.load_state_dict(torch.load(".mytrain/plane/pla_model_249.pth"))
         network.cuda()
 
@@ -99,7 +95,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}')
     elif pred_choice==1: #Cylinder
         #print('Shape is a cylinder')
-        network = PointNetCylinder()
+        network = CylinderRegressor()
         network.load_state_dict(torch.load(".mytrain/cylinder/cyl_model_249.pth"))
         network.cuda()
 
@@ -127,7 +123,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
     elif pred_choice==2: #Sphere
         #print('Shape is a sphere')
-        network = PointNetSphere()
+        network = SphereRegressor()
         network.load_state_dict(torch.load(".mytrain/sphere/sph_model_249.pth"))
         network.cuda()
 
@@ -148,7 +144,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_point}->{pred_radius}')
     elif pred_choice==3: #Cone
         #print('Shape is a cone')
-        network = PointNetCone()
+        network = ConeRegressor()
         network.load_state_dict(torch.load(".mytrain/cone/con_model_249.pth"))
         network.cuda()
 
@@ -174,7 +170,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
-        network = PointNetTorus()
+        network = TorusRegressor()
         network.load_state_dict(torch.load(".mytrain/torus/tor_model_249.pth"))
         network.cuda()
 

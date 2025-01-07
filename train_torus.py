@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetTorus
-from model.pointnet2_ssg import PointNetTorus
+from model.pointnet2_msg import PointNetTorus
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np

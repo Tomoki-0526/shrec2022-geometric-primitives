@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSphere
-from model.pointnet2_ssg import PointNetSphere
+from model.pointnet2_msg import PointNetSphere
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np

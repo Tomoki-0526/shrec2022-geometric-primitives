@@ -14,6 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def vis_curve(curve, title, filename):
+    plt.clf()
     X=np.arange(len(curve))
     Y=np.array(curve)
     plt.xlabel('epochs')

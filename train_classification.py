@@ -98,6 +98,9 @@ accTrain = []
 accTest = []
 
 for epoch in range(opt.nepoch):
+    running_loss = 0
+    running_acc = 0
+    cont = 0
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
         target, points = data
@@ -112,9 +115,16 @@ for epoch in range(opt.nepoch):
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
         print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
-        lossTrain.append(loss.item())
-        accTrain.append(correct.item() / float(opt.batchSize))
+        running_loss += loss.item()
+        running_acc += correct.item() / float(opt.batchSize)
+        cont += 1
 
+    lossTrain.append(running_loss / float(cont))
+    accTrain.append(running_acc / float(cont))
+
+    running_loss = 0
+    running_acc = 0
+    cont = 0
     for i,data in tqdm(enumerate(testdataloader, 0)):
         target, points = data
         points = points.transpose(2, 1)
@@ -125,8 +135,12 @@ for epoch in range(opt.nepoch):
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
         print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
-        lossTest.append(loss.item())
-        accTest.append(correct.item()/float(opt.batchSize))
+        running_loss += loss.item()
+        running_acc += correct.item() / float(opt.batchSize)
+        cont += 1
+
+    lossTest.append(running_loss / float(cont))
+    accTest.append(running_acc / float(cont))
 
     if epoch == opt.nepoch - 1:
         torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))

@@ -92,6 +92,8 @@ lossTrainValues = []
 lossTestValues = []
 
 for epoch in range(opt.nepoch):
+    running_loss = 0
+    cont = 0
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
         target, points = data
@@ -104,7 +106,10 @@ for epoch in range(opt.nepoch):
         loss.mean().backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
-        lossTrainValues.append(loss.mean().item())
+        running_loss += loss.mean().item()
+        cont += 1
+
+    lossTrainValues.append(running_loss / float(cont))
 
     #Validation after one epoch
     running_loss = 0
@@ -118,7 +123,7 @@ for epoch in range(opt.nepoch):
         pred, _ = classifier(points)
         loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
         running_loss += loss.item()
-        cont = cont + 1
+        cont += 1
     
     lossTestValues.append(running_loss/float(cont))
 

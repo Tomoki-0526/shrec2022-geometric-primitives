@@ -101,6 +101,8 @@ lossLoss4 = []
 delta = 1/256
 
 for epoch in range(opt.nepoch):
+    running_loss = 0
+    cont = 0
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
         target_normal, target_center, target_radius, points = data
@@ -122,7 +124,10 @@ for epoch in range(opt.nepoch):
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
 
-        lossTrainValues.append(loss.mean().item())
+        running_loss += loss.mean().item()
+        cont += 1
+
+    lossTrainValues.append(running_loss / float(cont))
    
     #Validation after one epoch
     running_loss = 0

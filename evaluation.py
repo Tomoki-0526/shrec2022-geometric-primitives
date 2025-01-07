@@ -64,7 +64,7 @@ classifier.cuda()
 input_pt = input_pt.transpose(2, 1)
 input_pt = input_pt.cuda().float()
 classifier = classifier.eval()
-pred, trans, trans_feat = classifier(input_pt)
+pred, _ = classifier(input_pt)
 pred_choice = pred.detach().max(1)[1].cpu().numpy()[0]
 
 classifier.cpu()
@@ -75,7 +75,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     if pred_choice==0: #Plane
         #print('Shape is a plane')
         network = PointNetPlane()
-        network.load_state_dict(torch.load(".mytrain/plane/pl_model_249.pth"))
+        network.load_state_dict(torch.load(".mytrain/plane/pla_model_249.pth"))
         network.cuda()
 
         network = network.eval()

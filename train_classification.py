@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSHREC2022
-from model.pointnet2_ssg import PointNetCls
+from model.model import Classifier
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
@@ -80,7 +80,7 @@ try:
 except OSError:
     pass
 
-classifier = PointNetCls(k=num_classes)
+classifier = Classifier(k=num_classes)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

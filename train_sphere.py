@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSphere
-from model.pointnet2_ssg import PointNetSphere
+from model.model import SphereRegressor
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
@@ -75,7 +75,7 @@ try:
 except OSError:
     pass
 
-classifier = PointNetSphere()
+classifier = SphereRegressor()
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

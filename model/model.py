@@ -3,9 +3,9 @@ import torch.nn.functional as F
 from model.pointnet2_utils import PointNetSetAbstraction
 
 
-class PointNetCls(nn.Module):
+class Classifier(nn.Module):
     def __init__(self,k):
-        super(PointNetCls, self).__init__()
+        super(Classifier, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
@@ -31,9 +31,9 @@ class PointNetCls(nn.Module):
         return x, l3_points
 
 
-class PointNetPlane(nn.Module):
+class PlaneRegressor(nn.Module):
     def __init__(self):
-        super(PointNetPlane, self).__init__()
+        super(PlaneRegressor, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
@@ -60,9 +60,9 @@ class PointNetPlane(nn.Module):
         return normal, xyz
     
 
-class PointNetCylinder(nn.Module):
+class CylinderRegressor(nn.Module):
     def __init__(self):
-        super(PointNetCylinder, self).__init__()
+        super(CylinderRegressor, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
@@ -91,9 +91,9 @@ class PointNetCylinder(nn.Module):
         return normal, center, radius
 
 
-class PointNetSphere(nn.Module):
+class SphereRegressor(nn.Module):
     def __init__(self):
-        super(PointNetSphere, self).__init__()
+        super(SphereRegressor, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
@@ -120,9 +120,9 @@ class PointNetSphere(nn.Module):
         return center, radius
     
 
-class PointNetCone(nn.Module):
+class ConeRegressor(nn.Module):
     def __init__(self):
-        super(PointNetCone, self).__init__()
+        super(ConeRegressor, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
@@ -151,9 +151,9 @@ class PointNetCone(nn.Module):
         return normal, vertex, aperture
     
 
-class PointNetTorus(nn.Module):
+class TorusRegressor(nn.Module):
     def __init__(self):
-        super(PointNetTorus, self).__init__()
+        super(TorusRegressor, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)

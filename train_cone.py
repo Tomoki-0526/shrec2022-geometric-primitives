@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCone
-from model.pointnet2_ssg import PointNetCone
+from model.model import ConeRegressor
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
@@ -75,7 +75,7 @@ try:
 except OSError:
     pass
 
-classifier = PointNetCone()
+classifier = ConeRegressor()
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

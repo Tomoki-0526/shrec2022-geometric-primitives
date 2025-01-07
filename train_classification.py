@@ -80,7 +80,7 @@ try:
 except OSError:
     pass
 
-classifier = Classifier(k=num_classes)
+classifier = Classifier(num_classes=num_classes)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

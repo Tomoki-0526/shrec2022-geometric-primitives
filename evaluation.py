@@ -53,7 +53,7 @@ input_pt, center, scale = normalize2(pcd, unit_ball=True)
 #print(f'Center:{center}, Scale: {scale}')
 input_pt = torch.unsqueeze(torch.from_numpy(input_pt), 0)
 
-classifier = Classifier(k=5)
+classifier = Classifier(num_classes=5)
 classifier.load_state_dict(torch.load('.mytrain/classification/cls_model_249.pth'))
 classifier.cuda()
 

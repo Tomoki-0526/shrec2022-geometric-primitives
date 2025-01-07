@@ -4,7 +4,7 @@ from model.pointnet2 import PointNetSetAbstraction
 
 
 class Classifier(nn.Module):
-    def __init__(self,k):
+    def __init__(self,num_classes):
         super(Classifier, self).__init__()
         self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=3, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
@@ -15,7 +15,7 @@ class Classifier(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.bn2 = nn.BatchNorm1d(256)
         self.drop2 = nn.Dropout(0.4)
-        self.fc3 = nn.Linear(256, k)
+        self.fc3 = nn.Linear(256, num_classes)
 
     def forward(self, xyz):
         B, _, _ = xyz.shape

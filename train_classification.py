@@ -25,7 +25,7 @@ def vis_curve(curve, title, filename):
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    '--batchSize', type=int, default=32, help='input batch size')
+    '--batchSize', type=int, default=16, help='input batch size')
 parser.add_argument(
     '--num_points', type=int, default=2048, help='input batch size')
 parser.add_argument(
@@ -83,7 +83,7 @@ except OSError:
 classifier = Classifier(num_classes=num_classes)
 if torch.cuda.device_count() > 1:
     classifier = torch.nn.DataParallel(classifier)
-    print(f'Let\'s use {torch.cuda.device_count()} gpus')
+    print(f'Let\'s use {torch.cuda.device_count()} gpus!')
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

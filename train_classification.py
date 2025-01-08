@@ -83,6 +83,7 @@ except OSError:
 classifier = Classifier(num_classes=num_classes)
 if torch.cuda.device_count() > 1:
     classifier = torch.nn.DataParallel(classifier)
+    print(f'Let\'s use {torch.cuda.device_count()} gpus')
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

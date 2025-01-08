@@ -78,6 +78,7 @@ except OSError:
 regressor = CylinderRegressor()
 if torch.cuda.device_count() > 1:
     regressor = torch.nn.DataParallel(regressor)
+    print(f'Let\'s use {torch.cuda.device_count()} gpus')
 
 if opt.model != '':
     regressor.load_state_dict(torch.load(opt.model))

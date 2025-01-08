@@ -7,6 +7,7 @@ from model.dgcnn import get_graph_feature
 
 class Classifier(nn.Module):
     def __init__(self,num_classes):
+        super(Classifier, self).__init__()
         self.bn1 = nn.BatchNorm2d(64)
         self.bn2 = nn.BatchNorm2d(64)
         self.bn3 = nn.BatchNorm2d(128)

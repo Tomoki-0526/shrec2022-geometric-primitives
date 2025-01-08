@@ -111,7 +111,7 @@ for epoch in range(opt.nepoch):
         points, target = points.cuda().float(), target.cuda()
         optimizer.zero_grad()
         classifier = classifier.train()
-        pred, _ = classifier(points)
+        pred = classifier(points)
         loss = F.nll_loss(pred, target)
         loss.backward()
         optimizer.step()
@@ -133,7 +133,7 @@ for epoch in range(opt.nepoch):
         points = points.transpose(2, 1)
         points, target = points.cuda().float(), target.cuda()
         classifier = classifier.eval()
-        pred, _ = classifier(points)
+        pred = classifier(points)
         loss = F.nll_loss(pred, target)
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
@@ -160,7 +160,7 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     points = points.transpose(2, 1)
     points, target = points.cuda().float(), target.cuda()
     classifier = classifier.eval()
-    pred, _ = classifier(points)
+    pred = classifier(points)
     pred_choice = pred.data.max(1)[1]
     correct = pred_choice.eq(target.data).cpu().sum()
     total_correct += correct.item()

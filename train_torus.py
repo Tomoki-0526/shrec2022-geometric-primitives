@@ -75,18 +75,18 @@ try:
 except OSError:
     pass
 
-classifier = TorusRegressor()
+regressor = TorusRegressor()
 if torch.cuda.device_count() > 1:
-    classifier = torch.nn.DataParallel(classifier)
+    regressor = torch.nn.DataParallel(regressor)
     print(f'Let\'s use {torch.cuda.device_count()} gpus!')
 
 if opt.model != '':
-    classifier.load_state_dict(torch.load(opt.model))
+    regressor.load_state_dict(torch.load(opt.model))
 
 
-optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
+optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-classifier.cuda()
+regressor.cuda()
 myloss = torch.nn.MSELoss()
 mylossCen = torch.nn.MSELoss()
 mylossR1 = torch.nn.MSELoss()
@@ -115,9 +115,9 @@ for epoch in range(opt.nepoch):
         target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
         
         optimizer.zero_grad()
-        classifier = classifier.train()
+        regressor = regressor.train()
         
-        pred_normal, pred_point, pred_radius_min, pred_radius_max = classifier(points)
+        pred_normal, pred_point, pred_radius_min, pred_radius_max = regressor(points)
         lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8))
         lossL2 = myloss(pred_normal, target_normal)
         lossPoint = mylossCen(pred_point, target_point)
@@ -151,9 +151,9 @@ for epoch in range(opt.nepoch):
         target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
         
         optimizer.zero_grad()
-        classifier = classifier.eval()
+        regressor = regressor.eval()
         
-        pred_normal, pred_point, pred_radius_min, pred_radius_max = classifier(points)
+        pred_normal, pred_point, pred_radius_min, pred_radius_max = regressor(points)
         lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8))
         lossL2 = myloss(pred_normal, target_normal)
         lossPoint = mylossCen(pred_point, target_point)
@@ -178,7 +178,7 @@ for epoch in range(opt.nepoch):
     lossLoss5.append(running_max/float(cont))
 
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/tor_model_%d.pth' % (opt.outf, epoch))
+        torch.save(regressor.state_dict(), '%s/tor_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'torus train loss', os.path.join(opt.outf, 'tor_train_loss.png'))
 vis_curve(lossTestValues, 'torus test loss - all', os.path.join(opt.outf, 'tor_test_loss_all.png'))
@@ -206,8 +206,8 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     points, target_normal = points.cuda().float(), target_normal.cuda().float()
     target_center, target_min, target_max = target_center.cuda().float(), target_min.cuda().float(), target_max.cuda().float()
 
-    classifier = classifier.eval()
-    pred_normal, pred_center, pred_min, pred_max = classifier(points)
+    regressor = regressor.eval()
+    pred_normal, pred_center, pred_min, pred_max = regressor(points)
     
     t = np.squeeze(target_normal.detach().cpu().numpy())
     p = np.squeeze(pred_normal.detach().cpu().numpy()) 

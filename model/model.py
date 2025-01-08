@@ -38,19 +38,19 @@ class Classifier(nn.Module):
 
     def forward(self, x):
         batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+        x = get_graph_feature(x, k=64)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
+        x = get_graph_feature(x1, k=128)
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x2, k=self.k)
+        x = get_graph_feature(x2, k=256)
         x = self.conv3(x)
         x3 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
+        x = get_graph_feature(x3, k=512)
         x = self.conv4(x)
         x4 = x.max(dim=-1, keepdim=False)[0]
 
@@ -105,19 +105,19 @@ class PlaneRegressor(nn.Module):
         
     def forward(self, xyz):
         batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+        x = get_graph_feature(x, k=64)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
+        x = get_graph_feature(x1, k=128)
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x2, k=self.k)
+        x = get_graph_feature(x2, k=256)
         x = self.conv3(x)
         x3 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
+        x = get_graph_feature(x3, k=512)
         x = self.conv4(x)
         x4 = x.max(dim=-1, keepdim=False)[0]
 
@@ -173,19 +173,19 @@ class CylinderRegressor(nn.Module):
 
     def forward(self, xyz):
         batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+        x = get_graph_feature(x, k=64)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
+        x = get_graph_feature(x1, k=128)
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x2, k=self.k)
+        x = get_graph_feature(x2, k=256)
         x = self.conv3(x)
         x3 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
+        x = get_graph_feature(x3, k=512)
         x = self.conv4(x)
         x4 = x.max(dim=-1, keepdim=False)[0]
 
@@ -241,19 +241,19 @@ class SphereRegressor(nn.Module):
 
     def forward(self, xyz):
         batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+        x = get_graph_feature(x, k=64)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
+        x = get_graph_feature(x1, k=128)
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x2, k=self.k)
+        x = get_graph_feature(x2, k=256)
         x = self.conv3(x)
         x3 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
+        x = get_graph_feature(x3, k=512)
         x = self.conv4(x)
         x4 = x.max(dim=-1, keepdim=False)[0]
 
@@ -309,19 +309,19 @@ class ConeRegressor(nn.Module):
 
     def forward(self, xyz):
         batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+        x = get_graph_feature(x, k=64)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
+        x = get_graph_feature(x1, k=128)
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x2, k=self.k)
+        x = get_graph_feature(x2, k=256)
         x = self.conv3(x)
         x3 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
+        x = get_graph_feature(x3, k=512)
         x = self.conv4(x)
         x4 = x.max(dim=-1, keepdim=False)[0]
 
@@ -379,19 +379,19 @@ class TorusRegressor(nn.Module):
 
     def forward(self, xyz):
         batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+        x = get_graph_feature(x, k=64)
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
+        x = get_graph_feature(x1, k=128)
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x2, k=self.k)
+        x = get_graph_feature(x2, k=256)
         x = self.conv3(x)
         x3 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
+        x = get_graph_feature(x3, k=512)
         x = self.conv4(x)
         x4 = x.max(dim=-1, keepdim=False)[0]
 

@@ -75,15 +75,17 @@ try:
 except OSError:
     pass
 
-classifier = PlaneRegressor()
+regressor = PlaneRegressor()
+if torch.cuda.device_count() > 1:
+    regressor = torch.nn.DataParallel(regressor)
 
 if opt.model != '':
-    classifier.load_state_dict(torch.load(opt.model))
+    regressor.load_state_dict(torch.load(opt.model))
 
 
-optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
+optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-classifier.cuda()
+regressor.cuda()
 
 
 num_batch = len(dataset) / opt.batchSize
@@ -100,8 +102,8 @@ for epoch in range(opt.nepoch):
         points = points[0].transpose(2, 1)
         points, target = points.cuda().float(), target.cuda().float()
         optimizer.zero_grad()
-        classifier = classifier.train()
-        pred, _ = classifier(points)
+        regressor = regressor.train()
+        pred, _ = regressor(points)
         loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
         loss.mean().backward()
         optimizer.step()
@@ -119,8 +121,8 @@ for epoch in range(opt.nepoch):
         #target = target[:, 0]
         points = points[0].transpose(2, 1)
         points, target = points.cuda().float(), target.cuda().float()
-        classifier = classifier.eval()
-        pred, _ = classifier(points)
+        regressor = regressor.eval()
+        pred, _ = regressor(points)
         loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
         running_loss += loss.item()
         cont += 1
@@ -128,7 +130,7 @@ for epoch in range(opt.nepoch):
     lossTestValues.append(running_loss/float(cont))
 
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/pl_model_%d.pth' % (opt.outf, epoch))
+        torch.save(regressor.state_dict(), '%s/pl_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'plane train loss', os.path.join(opt.outf, 'pla_train_loss.png'))
 vis_curve(lossTestValues, 'plane test loss - all (normal cosine)', os.path.join(opt.outf, 'pl_test_loss_all.png'))
@@ -140,8 +142,8 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     target, points = data
     points = points[0].transpose(2, 1)
     points, target = points.cuda().float(), target.cuda().float()
-    classifier = classifier.eval()
-    pred, _ = classifier(points)
+    regressor = regressor.eval()
+    pred, _ = regressor(points)
     t = np.squeeze(target.detach().cpu().numpy())
     p = np.squeeze(pred[0].detach().cpu().numpy())
     norm_p = np.linalg.norm(p)

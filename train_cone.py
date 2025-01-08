@@ -75,15 +75,17 @@ try:
 except OSError:
     pass
 
-classifier = ConeRegressor()
+regressor = ConeRegressor()
+if torch.cuda.device_count() > 1:
+    regressor = torch.nn.DataParallel(regressor)
 
 if opt.model != '':
-    classifier.load_state_dict(torch.load(opt.model))
+    regressor.load_state_dict(torch.load(opt.model))
 
 
-optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
+optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-classifier.cuda()
+regressor.cuda()
 myloss = torch.nn.MSELoss()
 mylossCen = torch.nn.MSELoss()
 mylossA = torch.nn.MSELoss()
@@ -111,8 +113,8 @@ for epoch in range(opt.nepoch):
         target_aperture = target_aperture.cuda().float()
         
         optimizer.zero_grad()
-        classifier = classifier.train()
-        pred_normal, pred_vertex, pred_aperture = classifier(points)
+        regressor = regressor.train()
+        pred_normal, pred_vertex, pred_aperture = regressor(points)
         
         lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8)) 
         lossL2 = myloss(pred_normal, target_normal)
@@ -142,9 +144,9 @@ for epoch in range(opt.nepoch):
         target_vertex = target_vertex.cuda().float()
         target_aperture = target_aperture.cuda().float()
 
-        classifier = classifier.eval()
+        regressor = regressor.eval()
         
-        pred_normal, pred_vertex, pred_aperture = classifier(points)
+        pred_normal, pred_vertex, pred_aperture = regressor(points)
 
         lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8)) #+ delta*torch.pow(radius*scale - r, 2)
         lossL2 = myloss(pred_normal, target_normal)
@@ -167,7 +169,7 @@ for epoch in range(opt.nepoch):
     lossLoss4.append(running_aper/float(cont))
 
     if epoch == opt.nepoch - 1:
-        torch.save(classifier.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
+        torch.save(regressor.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'cone train loss', os.path.join(opt.outf, 'con_train_loss.png'))
 vis_curve(lossTestValues, 'cone test loss - all', os.path.join(opt.outf, 'con_test_loss_all.png'))
@@ -192,8 +194,8 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     points, target_normal = points.cuda().float(), target_normal.cuda().float()
     target_center, target_aperture = target_center.cuda().float(), target_aperture.cuda().float()
 
-    classifier = classifier.eval()
-    pred_normal, pred_center, pred_aperture = classifier(points)
+    regressor = regressor.eval()
+    pred_normal, pred_center, pred_aperture = regressor(points)
     
     t = np.squeeze(target_normal.detach().cpu().numpy())
     p = np.squeeze(pred_normal.detach().cpu().numpy()) 

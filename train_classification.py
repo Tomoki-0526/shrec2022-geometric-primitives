@@ -81,6 +81,8 @@ except OSError:
     pass
 
 classifier = Classifier(num_classes=num_classes)
+if torch.cuda.device_count() > 1:
+    classifier = torch.nn.DataParallel(classifier)
 
 if opt.model != '':
     classifier.load_state_dict(torch.load(opt.model))

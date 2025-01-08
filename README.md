@@ -75,12 +75,12 @@ You must change the input and output path inside the bash script, according to y
 ## Commands
 
 ```bash
-CUDA_VISIBLE_DEVICES=2 python train_classification.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain/classification
-CUDA_VISIBLE_DEVICES=3 python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain/plane
-CUDA_VISIBLE_DEVICES=4 python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain/cylinder
-CUDA_VISIBLE_DEVICES=5 python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain/sphere
-CUDA_VISIBLE_DEVICES=6 python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain/cone
-CUDA_VISIBLE_DEVICES=7 python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=.mytrain/torus
+CUDA_VISIBLE_DEVICES=2 python train_classification.py --dataset=/home/szj/SHREC2022/dataset/training --outf=result/${MODEL_TYPE}/classification
+CUDA_VISIBLE_DEVICES=3 python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=result/${MODEL_TYPE}/plane
+CUDA_VISIBLE_DEVICES=4 python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=result/${MODEL_TYPE}/cylinder
+CUDA_VISIBLE_DEVICES=5 python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=result/${MODEL_TYPE}/sphere
+CUDA_VISIBLE_DEVICES=6 python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=result/${MODEL_TYPE}/cone
+CUDA_VISIBLE_DEVICES=7 python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=result/${MODEL_TYPE}/torus
 ```
 
 ## Note

@@ -1,5 +1,4 @@
 __pycache__/
-data/
-output/
-.**/
-pointnet2/
+.vscode/
+
+result/

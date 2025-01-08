@@ -54,7 +54,7 @@ input_pt, center, scale = normalize2(pcd, unit_ball=True)
 input_pt = torch.unsqueeze(torch.from_numpy(input_pt), 0)
 
 classifier = Classifier(num_classes=5)
-classifier.load_state_dict(torch.load('.mytrain/classification/cls_model_249.pth'))
+classifier.load_state_dict(torch.load('result/classification/cls_model_249.pth'))
 classifier.cuda()
 
 input_pt = input_pt.transpose(2, 1)
@@ -71,7 +71,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     if pred_choice==0: #Plane
         #print('Shape is a plane')
         network = PlaneRegressor()
-        network.load_state_dict(torch.load(".mytrain/plane/pla_model_249.pth"))
+        network.load_state_dict(torch.load("result/plane/pla_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -96,7 +96,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==1: #Cylinder
         #print('Shape is a cylinder')
         network = CylinderRegressor()
-        network.load_state_dict(torch.load(".mytrain/cylinder/cyl_model_249.pth"))
+        network.load_state_dict(torch.load("result/cylinder/cyl_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -124,7 +124,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==2: #Sphere
         #print('Shape is a sphere')
         network = SphereRegressor()
-        network.load_state_dict(torch.load(".mytrain/sphere/sph_model_249.pth"))
+        network.load_state_dict(torch.load("result/sphere/sph_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -145,7 +145,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==3: #Cone
         #print('Shape is a cone')
         network = ConeRegressor()
-        network.load_state_dict(torch.load(".mytrain/cone/con_model_249.pth"))
+        network.load_state_dict(torch.load("result/cone/con_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -171,7 +171,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
         network = TorusRegressor()
-        network.load_state_dict(torch.load(".mytrain/torus/tor_model_249.pth"))
+        network.load_state_dict(torch.load("result/torus/tor_model_249.pth"))
         network.cuda()
 
         network = network.eval()

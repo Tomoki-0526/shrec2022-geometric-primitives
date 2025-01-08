@@ -1,6 +1,7 @@
 from __future__ import print_function
-import argparse
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5'
+import argparse
 import random
 import torch
 import torch.nn.parallel
@@ -25,7 +26,7 @@ def vis_curve(curve, title, filename):
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    '--batchSize', type=int, default=32, help='input batch size')
+    '--batchSize', type=int, default=12, help='input batch size')
 parser.add_argument(
     '--num_points', type=int, default=2048, help='input batch size')
 parser.add_argument(

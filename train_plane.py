@@ -132,10 +132,10 @@ for epoch in range(opt.nepoch):
     lossTestValues.append(running_loss/float(cont))
 
     if epoch == opt.nepoch - 1:
-        torch.save(regressor.state_dict(), '%s/pl_model_%d.pth' % (opt.outf, epoch))
+        torch.save(regressor.state_dict(), '%s/pla_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'plane train loss', os.path.join(opt.outf, 'pla_train_loss.png'))
-vis_curve(lossTestValues, 'plane test loss - all (normal cosine)', os.path.join(opt.outf, 'pl_test_loss_all.png'))
+vis_curve(lossTestValues, 'plane test loss - all (normal cosine)', os.path.join(opt.outf, 'pla_test_loss_all.png'))
 
 running_loss = 0
 cont = 0

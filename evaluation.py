@@ -171,7 +171,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
         network = TorusRegressor()
-        network.load_state_dict(torch.load("result/dgcnn/torus/tor_model_249.pth"))
+        network.load_state_dict(torch.load("result/dgcnn/torus/tor_model_249.pth"), strict=False)
         network.cuda()
 
         network = network.eval()

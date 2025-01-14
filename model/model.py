@@ -41,7 +41,7 @@ class CylinderRegressor(nn.Module):
         self.fc3 = nn.Linear(256, 1)    # radius
 
     def forward(self, x):
-        x =  self.embedding(x)
+        x = self.embedding(x)
         normal = self.fc1(x)
         center = self.fc2(x)
         radius = self.fc3(x)

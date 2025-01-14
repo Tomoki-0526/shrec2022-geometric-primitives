@@ -35,10 +35,9 @@ def get_graph_feature(x, k=20, idx=None):
   
     return feature
 
-class DGCNN(nn.Module):
-    def __init__(self, config, k=80, num_classes=40):
-        super(DGCNN, self).__init__()
-        self.config = config
+class DGCNNEmbedding(nn.Module):
+    def __init__(self, k=80):
+        super(DGCNNEmbedding, self).__init__()
         self.k = k
 
         self.bn1 = nn.BatchNorm2d(64)
@@ -67,30 +66,6 @@ class DGCNN(nn.Module):
         self.linear2 = nn.Linear(512, 256)
         self.bn7 = nn.BatchNorm1d(256)
         self.dp2 = nn.Dropout(0.4)
-        if self.config == 'cls':
-            self.linear3 = nn.Linear(256, num_classes)
-        elif self.config == 'reg_pla':
-            self.linear3 = nn.Linear(256, 3)    # normal
-            self.linear4 = nn.Linear(256, 3)    # xyz
-        elif self.config == 'reg_cyl':
-            self.linear3 = nn.Linear(256, 3)    # normal
-            self.linear4 = nn.Linear(256, 3)    # center
-            self.linear5 = nn.Linear(256, 1)    # radius
-        elif self.config == 'reg_sph':
-            self.linear3 = nn.Linear(256, 3)    # center
-            self.linear4 = nn.Linear(256, 1)    # radius
-        elif self.config == 'reg_con':
-            self.linear3 = nn.Linear(256, 3)    # normal
-            self.linear4 = nn.Linear(256, 1)    # aperture
-            self.linear5 = nn.Linear(256, 3)    # vertex
-        elif self.config == 'reg_tor':
-            self.linear3 = nn.Linear(256, 3)    # normal
-            self.linear4 = nn.Linear(256, 3)    # center
-            self.linear5 = nn.Linear(256, 1)    # minR
-            self.linear6 = nn.Linear(256, 1)    # maxR
-        else:
-            raise ValueError(f'Invalid config: {self.config}')
-
 
     def forward(self, x):
         batch_size = x.size(0)
@@ -122,39 +97,4 @@ class DGCNN(nn.Module):
         x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
         x = self.dp2(x)
 
-        if self.config == 'cls':
-            x = self.linear3(x)
-            x = F.log_softmax(x, -1)
-
-            return x
-        elif self.config == 'reg_pla':
-            normal = self.linear3(x)
-            xyz = self.linear4(x)
-
-            return normal, xyz
-        elif self.config == 'reg_cyl':
-            normal = self.linear3(x)
-            center = self.linear4(x)
-            radius = self.linear5(x)
-
-            return normal, center, radius
-        elif self.config == 'reg_sph':
-            center = self.linear3(x)
-            radius = self.linear4(x)
-
-            return center, radius
-        elif self.config == 'reg_con':
-            normal = self.linear3(x)
-            aperture = self.linear4(x)
-            vertex = self.linear5(x)
-
-            return normal, vertex, aperture
-        elif self.config == 'reg_tor':
-            normal = self.linear3(x)
-            center = self.linear4(x)
-            minR = self.linear5(x)
-            maxR = self.linear6(x)
-
-            return normal, center, minR, maxR
-        else:
-            raise ValueError(f'Invalid config: {self.config}')
+        return x

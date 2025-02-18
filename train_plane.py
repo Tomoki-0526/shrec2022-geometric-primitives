@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+from loss import PlaneLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -95,19 +96,26 @@ num_batch = len(dataset) / opt.batchSize
 lossTrainValues = []
 lossTestValues = []
 
+plane_loss = PlaneLoss()
+
 for epoch in range(opt.nepoch):
     running_loss = 0
     cont = 0
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
-        target, points = data
+        target_normal, target_xyz, points = data
         points = points[0].transpose(2, 1)
-        points, target = points.cuda().float(), target.cuda().float()
+        points, target_normal, target_xyz = \
+            points.cuda().float(), target_normal.cuda().float(), target_xyz.cuda().float()
         optimizer.zero_grad()
         regressor = regressor.train()
-        pred, _ = regressor(points)
-        loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
-        loss.mean().backward()
+        pred_normal, pred_xyz = regressor(points)
+        
+        pred = torch.cat([pred_normal, pred_xyz], dim=1)
+        gt = torch.cat([target_normal, target_xyz], dim=1)
+        loss_normal, loss_xyz = plane_loss(pred, gt, None)
+        loss = loss_normal.mean() + loss_xyz.mean()
+        loss.backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
         running_loss += loss.mean().item()
@@ -119,13 +127,18 @@ for epoch in range(opt.nepoch):
     running_loss = 0
     cont = 0
     for i,data in tqdm(enumerate(testdataloader, 0)):
-        target, points = data
+        target_normal, target_xyz, points = data
         #target = target[:, 0]
         points = points[0].transpose(2, 1)
-        points, target = points.cuda().float(), target.cuda().float()
+        points, target_normal, target_xyz = \
+            points.cuda().float(), target_normal.cuda().float(), target_xyz.cuda().float()
         regressor = regressor.eval()
-        pred, _ = regressor(points)
-        loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
+        pred_normal, pred_xyz = regressor(points)
+
+        pred = torch.cat([pred_normal, pred_xyz], dim=1)
+        gt = torch.cat([target_normal, target_xyz], dim=1)
+        loss_normal, loss_xyz = plane_loss(pred, gt, None)
+        loss = loss_normal.mean() + loss_xyz.mean()
         running_loss += loss.item()
         cont += 1
     
@@ -141,18 +154,24 @@ running_loss = 0
 cont = 0
 
 for i,data in tqdm(enumerate(testdataloader, 0)):
-    target, points = data
+    target_normal, target_xyz, points = data
     points = points[0].transpose(2, 1)
-    points, target = points.cuda().float(), target.cuda().float()
+    points, target_normal, target_xyz = \
+        points.cuda().float(), target_normal.cuda().float(), target_xyz.cuda().float()
     regressor = regressor.eval()
-    pred, _ = regressor(points)
-    t = np.squeeze(target.detach().cpu().numpy())
-    p = np.squeeze(pred[0].detach().cpu().numpy())
+    pred_normal, pred_xyz = regressor(points)
+    
+    t = np.squeeze(target_normal.detach().cpu().numpy())
+    p = np.squeeze(pred_normal.detach().cpu().numpy())
     norm_p = np.linalg.norm(p)
     p = p/norm_p
     angle = 180*np.arccos(t.dot(p))/np.pi
     print(f'{t} -> {p}->{angle}')
-    loss = 1.0 - torch.pow(F.cosine_similarity(pred, target),9)
+
+    pred = torch.cat([pred_normal, pred_xyz], dim=1)
+    gt = torch.cat([target_normal, target_xyz], dim=1)
+    loss_normal, loss_xyz = plane_loss(pred, gt, None)
+    loss = loss_normal.mean() + loss_xyz.mean()
     running_loss += loss.item()
     cont = cont + 1
     

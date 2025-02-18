@@ -176,10 +176,14 @@ class DatasetPlane(data.Dataset):
             n1 = f.readline()
             n2 = f.readline()
             n3 = f.readline()
+            p1 = f.readline()
+            p2 = f.readline()
+            p3 = f.readline()
         
         normal = np.array([float(n1), float(n2), float(n3)])
+        xyz = np.array([float(p1), float(p2), float(p3)])
         
-        return normal,normalize(pcd, unit_ball=True)
+        return normal, xyz, normalize(pcd, unit_ball=True)
 
 #Dataset class for the cylinder regression
 class DatasetCylinder(data.Dataset):

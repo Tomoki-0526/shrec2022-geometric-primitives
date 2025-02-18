@@ -89,9 +89,6 @@ if opt.model != '':
 optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 regressor.cuda()
-myloss = torch.nn.MSELoss()
-myLossCen = torch.nn.MSELoss()
-myLossRad = torch.nn.MSELoss()
 
 cylinder_loss = CylinderLoss()
 
@@ -122,9 +119,7 @@ for epoch in range(opt.nepoch):
         pred = torch.cat([pred_radius, pred_normal, pred_center], dim=1)
         gt = torch.cat([target_radius, target_normal, target_center], dim=1)
         loss_normal, loss_center, loss_radius = cylinder_loss(pred, gt, None)
-        loss_normal, loss_center, loss_radius = \
-            loss_normal.mean(0), loss_center.mean(0), loss_radius.mean(0)
-        loss = loss_normal + loss_center + loss_radius
+        loss = loss_normal.mean(0) + loss_center.mean(0) + loss_radius.mean(0)
 
         loss.backward()
         optimizer.step()
@@ -151,9 +146,7 @@ for epoch in range(opt.nepoch):
         pred = torch.cat([pred_radius, pred_normal, pred_center], dim=1)
         gt = torch.cat([target_radius, target_normal, target_center], dim=1)
         loss_normal, loss_center, loss_radius = cylinder_loss(pred, gt, None)
-        loss_normal, loss_center, loss_radius = \
-            loss_normal.mean(0), loss_center.mean(0), loss_radius.mean(0)
-        loss = loss_normal + loss_center + loss_radius
+        loss = loss_normal.mean(0) + loss_center.mean(0) + loss_radius.mean(0)
         running_loss += loss.item()
         cont = cont + 1
     

@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+from loss import SphereLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -88,9 +89,8 @@ if opt.model != '':
 optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 regressor.cuda()
-myloss = torch.nn.MSELoss()
-mylossCen = torch.nn.MSELoss()
 
+sphere_loss = SphereLoss()
 
 num_batch = len(dataset) / opt.batchSize
 
@@ -116,8 +116,12 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         regressor = regressor.train()
         pred_center, pred_radius = regressor(points)
-        loss = mylossCen(pred_center, target_center) + myloss(pred_radius, target_radius)
-        loss.mean().backward()
+
+        pred = torch.cat([pred_radius, pred_center], dim=1)
+        gt = torch.cat([target_radius, target_center], dim=1)
+        loss_center, loss_radius = sphere_loss(pred, gt, None)
+        loss = loss_center.mean(0) + loss_radius.mean(0)
+        loss.backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
         running_loss += loss.mean().item()
@@ -127,9 +131,6 @@ for epoch in range(opt.nepoch):
 
     #Validation after one epoch
     running_loss = 0
-    
-    runningCenter = 0
-    runningRadius = 0
     
     cont = 0
     for i,data in tqdm(enumerate(testdataloader, 0)):
@@ -142,27 +143,22 @@ for epoch in range(opt.nepoch):
         regressor = regressor.eval()
         pred_center, pred_radius  = regressor(points)
 
-        lossCenter = mylossCen(target_center, pred_center)
-        lossRadius = myloss(target_radius, pred_radius)
-        loss = lossCenter + lossRadius
+        pred = torch.cat([pred_radius, pred_center], dim=1)
+        gt = torch.cat([target_radius, target_center], dim=1)
+        loss_center, loss_radius = sphere_loss(pred, gt, None)
+        loss = loss_center.mean(0) + loss_radius.mean(0)
 
         running_loss += loss.item()
-        runningCenter += lossCenter.item()
-        runningRadius += lossRadius.item()
         
         cont = cont + 1
     
     lossTestValues.append(running_loss/float(cont))
-    lossLoss1.append(runningCenter/float(cont))
-    lossLoss2.append(runningRadius/float(cont))
     
     if epoch == opt.nepoch - 1:
         torch.save(regressor.state_dict(), '%s/sph_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'sphere train loss', os.path.join(opt.outf, 'sph_train_loss.png'))
 vis_curve(lossTestValues, 'sphere test loss - all', os.path.join(opt.outf, 'sph_test_loss_all.png'))
-vis_curve(lossLoss1, 'sphere test loss - center', os.path.join(opt.outf, 'sph_test_loss_c.png'))
-vis_curve(lossLoss2, 'sphere test loss - radius', os.path.join(opt.outf, 'sph_test_loss_r.png'))
 
 running_loss = 0
 
@@ -184,10 +180,6 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     
     regressor = regressor.eval()
     pred_center, pred_radius = regressor(points)
-    
-    lossCenter = mylossCen(target_center, pred_center)
-    lossRadius = myloss(target_radius, pred_radius)
-    loss = lossCenter + lossRadius
     
     t = np.squeeze(target_center.detach().cpu().numpy())
     p = np.squeeze(pred_center.detach().cpu().numpy())

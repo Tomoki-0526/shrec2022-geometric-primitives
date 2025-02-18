@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+from loss import CylinderLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -92,7 +93,7 @@ myloss = torch.nn.MSELoss()
 myLossCen = torch.nn.MSELoss()
 myLossRad = torch.nn.MSELoss()
 
-
+cylinder_loss = CylinderLoss()
 
 num_batch = len(dataset) / opt.batchSize
 
@@ -117,16 +118,17 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         regressor = regressor.train()
         pred_normal, pred_center, pred_radius = regressor(points)
-        
-        lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8)) #+ delta*torch.pow(radius*scale - r, 2)
-        lossL2 = myloss(pred_normal, target_normal)
-        lossPoint = myLossCen(pred_center,target_center)
-        lossRad = myLossRad(pred_radius,target_radius)
-        loss = lossCos + lossL2 + lossPoint + lossRad
 
-        loss.mean().backward()
+        pred = torch.cat([pred_radius, pred_normal, pred_center], dim=1)
+        gt = torch.cat([target_radius, target_normal, target_center], dim=1)
+        loss_normal, loss_center, loss_radius = cylinder_loss(pred, gt, None)
+        loss_normal, loss_center, loss_radius = \
+            loss_normal.mean(0), loss_center.mean(0), loss_radius.mean(0)
+        loss = loss_normal + loss_center + loss_radius
+
+        loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
+        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
 
         running_loss += loss.mean().item()
         cont += 1
@@ -135,10 +137,6 @@ for epoch in range(opt.nepoch):
    
     #Validation after one epoch
     running_loss = 0
-    running_cos = 0
-    running_l2 = 0
-    running_point = 0
-    running_rad = 0
 
     cont = 0
     for i,data in tqdm(enumerate(testdataloader, 0)):
@@ -149,34 +147,23 @@ for epoch in range(opt.nepoch):
 
         regressor = regressor.eval()
         pred_normal, pred_center, pred_radius = regressor(points)
-        lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8)) #+ delta*torch.pow(radius*scale - r, 2)
-        lossL2 = myloss(pred_normal, target_normal)
-        lossPoint = myLossCen(pred_center,target_center)
-        lossRad = myLossRad(pred_radius,target_radius)
-        loss = lossCos + lossL2 + lossPoint + lossRad
 
-        running_cos += lossCos.item()
-        running_l2 += lossL2.item()
-        running_point += lossPoint.item()
-        running_rad += lossRad.item()
+        pred = torch.cat([pred_radius, pred_normal, pred_center], dim=1)
+        gt = torch.cat([target_radius, target_normal, target_center], dim=1)
+        loss_normal, loss_center, loss_radius = cylinder_loss(pred, gt, None)
+        loss_normal, loss_center, loss_radius = \
+            loss_normal.mean(0), loss_center.mean(0), loss_radius.mean(0)
+        loss = loss_normal + loss_center + loss_radius
         running_loss += loss.item()
         cont = cont + 1
     
     lossTestValues.append(running_loss/float(cont))
-    lossLoss1.append(running_cos/float(cont))
-    lossLoss2.append(running_l2/float(cont))
-    lossLoss3.append(running_point/float(cont))
-    lossLoss4.append(running_rad/float(cont))
 
     if epoch == opt.nepoch - 1:
         torch.save(regressor.state_dict(), '%s/cyl_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'cylinder train loss', os.path.join(opt.outf, 'cyl_train_loss.png'))
 vis_curve(lossTestValues, 'cylinder test loss - all', os.path.join(opt.outf, 'cyl_test_loss_all.png'))
-vis_curve(lossLoss1, 'cylinder test loss - normal cosine', os.path.join(opt.outf, 'cyl_test_loss_cos.png'))
-vis_curve(lossLoss2, 'cylinder test loss - normal L2', os.path.join(opt.outf, 'cyl_test_loss_l2.png'))
-vis_curve(lossLoss3, 'cylinder test loss - center', os.path.join(opt.outf, 'cyl_test_loss_c.png'))
-vis_curve(lossLoss4, 'cylinder test loss - radius', os.path.join(opt.outf, 'cyl_test_loss_r.png'))
 
 angle_err = 0
 point_err = 0

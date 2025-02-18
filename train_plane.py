@@ -114,7 +114,7 @@ for epoch in range(opt.nepoch):
         pred = torch.cat([pred_normal, pred_xyz], dim=1)
         gt = torch.cat([target_normal, target_xyz], dim=1)
         loss_normal, loss_xyz = plane_loss(pred, gt, None)
-        loss = loss_normal.mean() + loss_xyz.mean()
+        loss = loss_normal.mean(0)# + loss_xyz.mean(0)
         loss.backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
@@ -138,7 +138,7 @@ for epoch in range(opt.nepoch):
         pred = torch.cat([pred_normal, pred_xyz], dim=1)
         gt = torch.cat([target_normal, target_xyz], dim=1)
         loss_normal, loss_xyz = plane_loss(pred, gt, None)
-        loss = loss_normal.mean() + loss_xyz.mean()
+        loss = loss_normal.mean(0)# + loss_xyz.mean(0)
         running_loss += loss.item()
         cont += 1
     
@@ -171,7 +171,7 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     pred = torch.cat([pred_normal, pred_xyz], dim=1)
     gt = torch.cat([target_normal, target_xyz], dim=1)
     loss_normal, loss_xyz = plane_loss(pred, gt, None)
-    loss = loss_normal.mean() + loss_xyz.mean()
+    loss = loss_normal.mean(0)# + loss_xyz.mean(0)
     running_loss += loss.item()
     cont = cont + 1
     

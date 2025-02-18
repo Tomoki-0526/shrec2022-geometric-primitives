@@ -120,8 +120,8 @@ for epoch in range(opt.nepoch):
         loss = loss_center.mean(0) + loss_radius.mean(0)
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
-        running_loss += loss.mean().item()
+        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
+        running_loss += loss.item()
         cont += 1
 
     lossTrainValues.append(running_loss / float(cont))

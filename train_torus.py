@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+from loss import TorusLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -88,20 +89,13 @@ if opt.model != '':
 optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 regressor.cuda()
-myloss = torch.nn.MSELoss()
-mylossCen = torch.nn.MSELoss()
-mylossR1 = torch.nn.MSELoss()
-mylossR2 = torch.nn.MSELoss()
+
+torus_loss = TorusLoss()
 
 num_batch = len(dataset) / opt.batchSize
 
 lossTrainValues = []
 lossTestValues = []
-lossLoss1 = []
-lossLoss2 = []
-lossLoss3 = []
-lossLoss4 = []
-lossLoss5 = []
 
 for epoch in range(opt.nepoch):
     running_loss = 0
@@ -119,17 +113,15 @@ for epoch in range(opt.nepoch):
         regressor = regressor.train()
         
         pred_normal, pred_point, pred_radius_min, pred_radius_max = regressor(points)
-        lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8))
-        lossL2 = myloss(pred_normal, target_normal)
-        lossPoint = mylossCen(pred_point, target_point)
-        lossMinR = mylossR1(pred_radius_min, target_radius_min)
-        lossMaxR = mylossR2(pred_radius_max, target_radius_max)
-        loss = lossCos + lossL2 + lossPoint + lossMinR + lossMaxR
         
-        loss.mean().backward()
+        pred = torch.cat([pred_radius_max, pred_radius_min, pred_normal, pred_point], dim=1)
+        gt = torch.cat([target_radius_max, target_radius_min, target_normal, target_point], dim=1)
+        loss_normal, loss_point, loss_R, loss_r = torus_loss(pred, gt, None)
+        loss = loss_normal.mean(0) + loss_point.mean(0) + loss_R.mean(0) + loss_r.mean(0)
+        loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
-        running_loss += loss.mean().item()
+        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
+        running_loss += loss.item()
         cont += 1
 
         lossTrainValues.append(running_loss / float(cont))
@@ -137,11 +129,6 @@ for epoch in range(opt.nepoch):
   
     #Validation after one epoch
     running_loss = 0
-    running_cos = 0
-    running_l2 = 0
-    running_point = 0
-    running_min = 0
-    running_max = 0
 
     cont = 0
     for i,data in tqdm(enumerate(testdataloader, 0)):
@@ -155,39 +142,22 @@ for epoch in range(opt.nepoch):
         regressor = regressor.eval()
         
         pred_normal, pred_point, pred_radius_min, pred_radius_max = regressor(points)
-        lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8))
-        lossL2 = myloss(pred_normal, target_normal)
-        lossPoint = mylossCen(pred_point, target_point)
-        lossMinR = mylossR1(pred_radius_min, target_radius_min)
-        lossMaxR = mylossR2(pred_radius_max, target_radius_max)
-        loss = lossCos + lossL2 + lossPoint + lossMinR + lossMaxR
+        pred = torch.cat([pred_radius_max, pred_radius_min, pred_normal, pred_point], dim=1)
+        gt = torch.cat([target_radius_max, target_radius_min, target_normal, target_point], dim=1)
+        loss_normal, loss_point, loss_R, loss_r = torus_loss(pred, gt, None)
+        loss = loss_normal.mean(0) + loss_point.mean(0) + loss_R.mean(0) + loss_r.mean(0)
 
-        running_cos += lossCos.item()
-        running_l2 += lossL2.item()
-        running_point += lossPoint.item()
-        running_min += lossMinR.item()
-        running_max += lossMaxR.item()
         running_loss += loss.item()
 
         cont = cont + 1
     
     lossTestValues.append(running_loss/float(cont))
-    lossLoss1.append(running_cos/float(cont))
-    lossLoss2.append(running_l2/float(cont))
-    lossLoss3.append(running_point/float(cont))
-    lossLoss4.append(running_min/float(cont))
-    lossLoss5.append(running_max/float(cont))
 
     if epoch == opt.nepoch - 1:
         torch.save(regressor.state_dict(), '%s/tor_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'torus train loss', os.path.join(opt.outf, 'tor_train_loss.png'))
 vis_curve(lossTestValues, 'torus test loss - all', os.path.join(opt.outf, 'tor_test_loss_all.png'))
-vis_curve(lossLoss1, 'torus test loss - normal cosine', os.path.join(opt.outf, 'tor_test_loss_cos.png'))
-vis_curve(lossLoss2, 'torus test loss - normal L2', os.path.join(opt.outf, 'tor_test_loss_l2.png'))
-vis_curve(lossLoss3, 'torus test loss - center', os.path.join(opt.outf, 'tor_test_loss_center.png'))
-vis_curve(lossLoss4, 'torus test loss - min radius', os.path.join(opt.outf, 'tor_test_loss_minr.png'))
-vis_curve(lossLoss5, 'torus test loss - max radius', os.path.join(opt.outf, 'tor_test_loss_maxr.png'))
 
 angle_err = 0
 point_err = 0

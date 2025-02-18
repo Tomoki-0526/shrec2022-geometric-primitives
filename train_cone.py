@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+from loss import ConeLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -88,19 +89,13 @@ if opt.model != '':
 optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 regressor.cuda()
-myloss = torch.nn.MSELoss()
-mylossCen = torch.nn.MSELoss()
-mylossA = torch.nn.MSELoss()
 
+cone_loss = ConeLoss()
 
 num_batch = len(dataset) / opt.batchSize
 
 lossTrainValues = []
 lossTestValues = []
-lossLoss1 = []
-lossLoss2 = []
-lossLoss3 = []
-lossLoss4 = []
 delta = 1/256
 
 for epoch in range(opt.nepoch):
@@ -118,12 +113,11 @@ for epoch in range(opt.nepoch):
         regressor = regressor.train()
         pred_normal, pred_vertex, pred_aperture = regressor(points)
         
-        lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8)) 
-        lossL2 = myloss(pred_normal, target_normal)
-        lossCen = mylossCen(pred_vertex, target_vertex)
-        lossAper = mylossA(pred_aperture, target_aperture)
-        loss = lossCos + lossL2 + lossCen + lossAper
-        loss.mean().backward()
+        pred = torch.cat([pred_aperture, pred_normal, pred_vertex], dim=1)
+        gt = torch.cat([target_aperture, target_normal, target_vertex], dim=1)
+        loss_normal, loss_vertex, loss_aper = cone_loss(pred, gt, None)
+        loss = loss_normal.mean(0) + loss_vertex.mean(0) + loss_aper.mean(0)
+        loss.backward()
         optimizer.step()
         print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.mean().item()))
         running_loss += loss.mean().item()
@@ -133,10 +127,6 @@ for epoch in range(opt.nepoch):
 
     #Validation after one epoch
     running_loss = 0
-    running_cos = 0
-    running_l2 = 0
-    running_ver = 0
-    running_aper = 0
 
     cont = 0
     for i,data in tqdm(enumerate(testdataloader, 0)):
@@ -150,35 +140,22 @@ for epoch in range(opt.nepoch):
         
         pred_normal, pred_vertex, pred_aperture = regressor(points)
 
-        lossCos = (1.0 - torch.pow(F.cosine_similarity(pred_normal, target_normal),8)) #+ delta*torch.pow(radius*scale - r, 2)
-        lossL2 = myloss(pred_normal, target_normal)
-        lossCen = mylossCen(pred_vertex, target_vertex)
-        lossAper = mylossA(pred_aperture, target_aperture)
-        loss = lossCos + lossL2 + lossCen + lossAper
+        pred = torch.cat([pred_aperture, pred_normal, pred_vertex], dim=1)
+        gt = torch.cat([target_aperture, target_normal, target_vertex], dim=1)
+        loss_normal, loss_vertex, loss_aper = cone_loss(pred, gt, None)
+        loss = loss_normal.mean(0) + loss_vertex.mean(0) + loss_aper.mean(0)
 
         running_loss += loss.item()
-        running_cos += lossCos.item()
-        running_l2 += lossL2.item()
-        running_ver += lossCen.item()
-        running_aper += lossAper.item()
 
         cont = cont + 1
     
     lossTestValues.append(running_loss/float(cont))
-    lossLoss1.append(running_cos/float(cont))
-    lossLoss2.append(running_l2/float(cont))
-    lossLoss3.append(running_ver/float(cont))
-    lossLoss4.append(running_aper/float(cont))
 
     if epoch == opt.nepoch - 1:
         torch.save(regressor.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'cone train loss', os.path.join(opt.outf, 'con_train_loss.png'))
 vis_curve(lossTestValues, 'cone test loss - all', os.path.join(opt.outf, 'con_test_loss_all.png'))
-vis_curve(lossLoss1, 'cone test loss - normal cosine', os.path.join(opt.outf, 'con_test_loss_cos.png'))
-vis_curve(lossLoss2, 'cone test loss - normal L2', os.path.join(opt.outf, 'con_test_loss_l2.png'))
-vis_curve(lossLoss3, 'cone test loss - vertex', os.path.join(opt.outf, 'con_test_loss_vert.png'))
-vis_curve(lossLoss4, 'cone test loss - aperture', os.path.join(opt.outf, 'con_test_loss_aper.png'))
 
 angle_err = 0
 point_err = 0

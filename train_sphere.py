@@ -96,9 +96,6 @@ num_batch = len(dataset) / opt.batchSize
 
 lossTrainValues = []
 lossTestValues = []
-lossLoss1 = []
-lossLoss2 = []
-
 
 for epoch in range(opt.nepoch):
     running_loss = 0

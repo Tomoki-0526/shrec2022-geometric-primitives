@@ -108,6 +108,7 @@ for epoch in range(opt.nepoch):
         points = points.transpose(2, 1)
         points = points.cuda().float()
         target_center = target_center.cuda().float()
+        target_radius = torch.unsqueeze(target_radius, 1)
         target_radius = target_radius.cuda().float()
         
         optimizer.zero_grad()
@@ -137,6 +138,7 @@ for epoch in range(opt.nepoch):
         points = points.cuda().float()
         target_center = target_center.cuda().float()
         target_radius = target_radius.cuda().float()
+        target_radius = torch.unsqueeze(target_radius, 1)
         regressor = regressor.eval()
         pred_center, pred_radius  = regressor(points)
 

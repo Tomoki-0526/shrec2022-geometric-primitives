@@ -109,6 +109,7 @@ for epoch in range(opt.nepoch):
     for i, data in enumerate(dataloader, 0):
         target_normal, target_center, target_radius, points = data
         points = points.transpose(2, 1)
+        target_radius = torch.unsqueeze(target_radius, 1)
         points, target_normal = points.cuda().float(), target_normal.cuda().float()
         target_center, target_radius = target_center.cuda().float(), target_radius.cuda().float()
         
@@ -137,6 +138,7 @@ for epoch in range(opt.nepoch):
     for i,data in tqdm(enumerate(testdataloader, 0)):
         target_normal, target_center, target_radius, points = data
         points = points.transpose(2, 1)
+        target_radius = torch.unsqueeze(target_radius, 1)
         points, target_normal = points.cuda().float(), target_normal.cuda().float()
         target_center, target_radius = target_center.cuda().float(), target_radius.cuda().float()
 

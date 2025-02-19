@@ -106,6 +106,7 @@ for epoch in range(opt.nepoch):
         target_normal, target_point, target_radius_min, target_radius_max, points = data
         
         points = points.transpose(2, 1)
+        target_radius_min, target_radius_max = torch.unsqueeze(target_radius_min, 1), torch.unsqueeze(target_radius_max, 1)
         points, target_normal, target_point = points.cuda().float(), target_normal.cuda().float(), target_point.cuda().float()
         target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
         
@@ -135,6 +136,7 @@ for epoch in range(opt.nepoch):
         target_normal, target_point, target_radius_min, target_radius_max, points = data
         
         points = points.transpose(2, 1)
+        target_radius_min, target_radius_max = torch.unsqueeze(target_radius_min, 1), torch.unsqueeze(target_radius_max, 1)
         points, target_normal, target_point = points.cuda().float(), target_normal.cuda().float(), target_point.cuda().float()
         target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
         

@@ -105,6 +105,7 @@ for epoch in range(opt.nepoch):
     for i, data in enumerate(dataloader, 0):
         target_normal, target_vertex, target_aperture, points = data
         points = points.transpose(2, 1)
+        target_aperture = torch.unsqueeze(target_aperture, 1)
         points, target_normal = points.cuda().float(), target_normal.cuda().float()
         target_vertex = target_vertex.cuda().float()
         target_aperture = target_aperture.cuda().float()
@@ -132,6 +133,7 @@ for epoch in range(opt.nepoch):
     for i,data in tqdm(enumerate(testdataloader, 0)):
         target_normal, target_vertex, target_aperture, points = data
         points = points.transpose(2, 1)
+        target_aperture = torch.unsqueeze(target_aperture, 1)
         points, target_normal = points.cuda().float(), target_normal.cuda().float()
         target_vertex = target_vertex.cuda().float()
         target_aperture = target_aperture.cuda().float()

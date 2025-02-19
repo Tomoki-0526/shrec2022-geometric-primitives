@@ -1,6 +1,7 @@
 import torch.nn as nn
-from model.dgcnn import DGCNNEmbedding
 import torch.nn.functional as F
+from model.dgcnn import DGCNNEmbedding
+from model.fcnn import MinkowskiFCNN
 
 
 class Classifier(nn.Module):
@@ -20,80 +21,42 @@ class Classifier(nn.Module):
 class PlaneRegressor(nn.Module):
     def __init__(self):
         super(PlaneRegressor, self).__init__()
-        self.embedding = DGCNNEmbedding()
-        self.fc1 = nn.Linear(256, 3)    # normal
-        self.fc2 = nn.Linear(256, 3)    # xyz
+        self.embedding = MinkowskiFCNN(in_channel=3, out_channel=3)
         
     def forward(self, x):
-        x = self.embedding(x)
-        normal = self.fc1(x)
-        xyz = self.fc2(x)
-
-        return normal, xyz
+        return self.embedding(x)
 
 
 class CylinderRegressor(nn.Module):
     def __init__(self):
         super(CylinderRegressor, self).__init__()
-        self.embedding = DGCNNEmbedding()
-        self.fc1 = nn.Linear(256, 3)    # normal
-        self.fc2 = nn.Linear(256, 3)    # center
-        self.fc3 = nn.Linear(256, 1)    # radius
+        self.embedding = MinkowskiFCNN(in_channel=3, out_channel=7)
 
     def forward(self, x):
-        x = self.embedding(x)
-        normal = self.fc1(x)
-        center = self.fc2(x)
-        radius = self.fc3(x)
-
-        return normal, center, radius
+        return self.embedding(x)
 
 
 class SphereRegressor(nn.Module):
     def __init__(self):
         super(SphereRegressor, self).__init__()
-        self.embedding = DGCNNEmbedding()
-        self.fc1 = nn.Linear(256, 3)    # center
-        self.fc2 = nn.Linear(256, 1)    # radius
+        self.embedding = MinkowskiFCNN(in_channel=3, out_channel=4)
 
     def forward(self, x):
-        x = self.embedding(x)
-        center = self.fc1(x)
-        radius = self.fc2(x)
-
-        return center, radius
+        return self.embedding(x)
 
 
 class ConeRegressor(nn.Module):
     def __init__(self):
         super(ConeRegressor, self).__init__()
-        self.embedding = DGCNNEmbedding()
-        self.fc1 = nn.Linear(256, 3)    # normal
-        self.fc2 = nn.Linear(256, 1)    # aperture
-        self.fc3 = nn.Linear(256, 3)    # vertex
+        self.embedding = MinkowskiFCNN(in_channel=3, out_channel=7)
 
     def forward(self, x):
-        x = self.embedding(x)
-        normal = self.fc1(x)
-        aperture = self.fc2(x)
-        vertex = self.fc3(x)
-
-        return normal, vertex, aperture
+        return self.embedding(x)
 
 class TorusRegressor(nn.Module):
     def __init__(self):
         super(TorusRegressor, self).__init__()
-        self.embedding = DGCNNEmbedding()
-        self.fc1 = nn.Linear(256, 3)    # normal
-        self.fc2 = nn.Linear(256, 3)    # center
-        self.fc3 = nn.Linear(256, 1)    # minR
-        self.fc4 = nn.Linear(256, 1)    # maxR
+        self.embedding = MinkowskiFCNN(in_channel=3, out_channel=8)
 
     def forward(self, x):
-        x = self.embedding(x)
-        normal = self.fc1(x)
-        center = self.fc2(x)
-        minR = self.fc3(x)
-        maxR = self.fc4(x)
-
-        return normal, center, minR, maxR
+        return self.embedding(x)

@@ -6,35 +6,11 @@ import glob
 from numpy import linalg as LA
 import random
 import math
-import MinkowskiEngine as ME
 import einops
 import transforms as t
 
 #####################################################################
 # M4 methods
-def minkowski_collate(list_data):
-    if list_data[0]['y'] is not None:
-        coordinates, features, labels = ME.utils.sparse_collate(
-            [d['x'] for d in list_data],
-            [d['x'] for d in list_data],
-            [d['y'].unsqueeze(0) for d in list_data],
-            dtype = torch.float32
-        )
-    else:
-        coordinates, features = ME.utils.sparse_collate(
-            [d['x'] for d in list_data],
-            [d['x'] for d in list_data],
-            dtype = torch.float32
-        )
-        labels = None
-
-    ret = {
-        "coordinates"   : coordinates, 
-        "features"      : features,
-        "labels"        : labels,
-    }
-    return ret
-
 train_transforms = [t.KeepInitialPoints(),
                     t.Translate(), 
                     t.SphereNormalization(), 
@@ -296,9 +272,10 @@ class DatasetPlane(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
+        pcd = torch.from_numpy(pcd).float()
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
-        label = parse_label(gtfile) if self.split == 'train' else {'data': None}
+        label = parse_label(gtfile)
 
         data = {'x': pcd, 'y': label['data'], 'index': idx+1}
         

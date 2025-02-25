@@ -30,8 +30,8 @@ class SphereNormalization():
         
     def __call__(self, x):
         
-        assert isinstance(x["x"], torch.Tensor)
-        assert x["x"].dim() == 2
+        assert isinstance(x["x"], torch.Tensor), f"Expected torch.Tensor, got {type(x['x'])}"
+        assert x["x"].dim() == 2, f"Expected 2D tensor, got {x['x'].dim()}"
         
         max_norm = (x["x"]*x["x"]).sum(-1).max().sqrt() / self.scale
         x["x"] /= max_norm
@@ -49,8 +49,8 @@ class Translate():
     
     def __call__(self, x):
         #print(x["x"])
-        assert isinstance(x["x"], torch.Tensor)
-        assert x["x"].dim() == 2
+        assert isinstance(x["x"], torch.Tensor), f"Expected torch.Tensor, got {type(x['x'])}"
+        assert x["x"].dim() == 2, f"Expected 2D tensor, got {x['x'].dim()}"
         
         centroid = x["x"].mean(dim=0)
         shift = - centroid + self.center
@@ -72,8 +72,8 @@ class RandomRotate():
         assert axis in [0,1,2]
         
     def __call__(self, x):
-        assert isinstance(x["x"], torch.Tensor)
-        assert x["x"].dim() == 2
+        assert isinstance(x["x"], torch.Tensor), f"Expected torch.Tensor, got {type(x['x'])}"
+        assert x["x"].dim() == 2, f"Expected 2D tensor, got {x['x'].dim()}"
         
         rad = torch.rand(1).item() * self.max_deg * 0.0174532925
         trans = self._R(rad)
@@ -122,8 +122,8 @@ class GaussianNoise():
     
     def __call__(self, x):
         
-        assert isinstance(x["x"], torch.Tensor)
-        assert x["x"].dim() == 2
+        assert isinstance(x["x"], torch.Tensor), f"Expected torch.Tensor, got {type(x['x'])}"
+        assert x["x"].dim() == 2, f"Expected 2D tensor, got {x['x'].dim()}"
         
         N, d = x["x"].shape
         noise = torch.normal(mean=self.mean, std = self.std, size=(N, d))

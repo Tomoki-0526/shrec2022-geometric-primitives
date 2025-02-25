@@ -1,19 +1,20 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import argparse
 import random
 import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from dataset import DatasetPlane
+from dataset import DatasetPlane, train_transforms, valid_transforms
 from model.model import PlaneRegressor
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import PlaneLoss
+from utils import minkowski_collate, create_input_batch
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -48,29 +49,33 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-dataset = DatasetPlane(
+train_dataset = DatasetPlane(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train')
+        split='train',
+        transform=train_transforms)
 
-test_dataset = DatasetPlane(
+valid_dataset = DatasetPlane(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points)
+        npoints=opt.num_points,
+        transform=valid_transforms)
 
-dataloader = torch.utils.data.DataLoader(
-    dataset,
+train_loader = torch.utils.data.DataLoader(
+    train_dataset,
     batch_size=opt.batchSize,
     shuffle=True,
+    collate_fn=minkowski_collate,
     num_workers=int(opt.workers))
 
-testdataloader = torch.utils.data.DataLoader(
-        test_dataset,
+valid_loader = torch.utils.data.DataLoader(
+        valid_dataset,
         batch_size=1,
-        shuffle=True,
+        shuffle=False,
+        collate_fn=minkowski_collate,
         num_workers=int(opt.workers))
 
-print(len(dataset), len(test_dataset))
+print(len(train_dataset), len(valid_dataset))
 
 try:
     os.makedirs(opt.outf)
@@ -78,9 +83,10 @@ except OSError:
     pass
 
 regressor = PlaneRegressor()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     regressor = torch.nn.DataParallel(regressor)
-    print(f'Let\'s use {torch.cuda.device_count()} gpus!')
+print(f'Let\'s use {torch.cuda.device_count()} gpu(s)!')
 
 if opt.model != '':
     regressor.load_state_dict(torch.load(opt.model))
@@ -91,88 +97,105 @@ scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 regressor.cuda()
 
 
-num_batch = len(dataset) / opt.batchSize
+num_batch = len(train_dataset) / opt.batchSize
 
 lossTrainValues = []
-lossTestValues = []
+lossValidValues = []
 
 plane_loss = PlaneLoss()
 
 for epoch in range(opt.nepoch):
-    running_loss = 0
-    cont = 0
-    scheduler.step()
-    for i, data in enumerate(dataloader, 0):
-        target_normal, target_xyz, points = data
-        points = points[0].transpose(2, 1)
-        points, target_normal, target_xyz = \
-            points.cuda().float(), target_normal.cuda().float(), target_xyz.cuda().float()
+    # for loss and accuracy tracking the training set
+    m_loss = 0
+    m_vertex_loss = 0
+    m_normal_loss = 0
+
+    for i, data in tqdm(enumerate(train_loader, 0)):
         optimizer.zero_grad()
         regressor = regressor.train()
-        pred_normal, pred_xyz = regressor(points)
-        
-        pred = torch.cat([pred_normal, pred_xyz], dim=1)
-        gt = torch.cat([target_normal, target_xyz], dim=1)
-        loss_normal, loss_xyz = plane_loss(pred, gt, None)
-        loss = loss_normal.mean(0)# + loss_xyz.mean(0)
+
+        # reading the data and formating them
+        labels = data['labels'].to(device)
+        gt = labels[:, 1:]
+        minknet_input = create_input_batch(
+            data, 
+            device=device,
+            quantization_size=0.05
+        )
+
+        # predicting the normal vector
+        pred = regressor(minknet_input)
+        # getting the average of the points to get the plane vertex
+        pred_vertex = data['means'].to(device)
+        # adding to one vector
+        pred = torch.cat([pred, pred_vertex], dim=-1)
+
+        # calculating the loss
+        normal_loss, vertex_loss = plane_loss(pred, gt, data['trans'])
+
+        loss = normal_loss.mean(0) #+ vertex_loss.mean()
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
-        running_loss += loss.item()
-        cont += 1
 
-    lossTrainValues.append(running_loss / float(cont))
+        # tracking progress
+        m_normal_loss += normal_loss.mean(0).item()
+        m_vertex_loss += vertex_loss.mean(0).item()
+        m_loss += loss.item()
+    
+    # stepping the scheduler
+    scheduler.step()
+
+    # epoch average scores   
+    m_loss /= len(train_loader)
+    m_normal_loss /= len(train_loader)
+    m_vertex_loss /= len(train_loader)
+    print(f" Epoch: {epoch} | Training: Total loss = {m_loss}, Normal loss: {m_normal_loss}, Vertex loss: {m_vertex_loss}")
+
+    lossTrainValues.append(m_loss)
 
     #Validation after one epoch
-    running_loss = 0
-    cont = 0
-    for i,data in tqdm(enumerate(testdataloader, 0)):
-        target_normal, target_xyz, points = data
-        #target = target[:, 0]
-        points = points[0].transpose(2, 1)
-        points, target_normal, target_xyz = \
-            points.cuda().float(), target_normal.cuda().float(), target_xyz.cuda().float()
-        regressor = regressor.eval()
-        pred_normal, pred_xyz = regressor(points)
+    with torch.no_grad():
+        m_loss = 0
+        m_vertex_loss = 0
+        m_normal_loss = 0
 
-        pred = torch.cat([pred_normal, pred_xyz], dim=1)
-        gt = torch.cat([target_normal, target_xyz], dim=1)
-        loss_normal, loss_xyz = plane_loss(pred, gt, None)
-        loss = loss_normal.mean(0)# + loss_xyz.mean(0)
-        running_loss += loss.item()
-        cont += 1
+        regressor = regressor.eval()
     
-    lossTestValues.append(running_loss/float(cont))
+        for i, data in tqdm(enumerate(valid_loader, 0)):
+            labels = data['labels'].to(device)
+            gt = labels[:, 1:]
+            minknet_input = create_input_batch(
+                data, 
+                device=device,
+                quantization_size=0.05
+            )
+
+            # predicting the normal vector
+            pred = regressor(minknet_input)
+
+            # getting the average of the points to get the plane vertex
+            pred_vertex = data['means'].to(device)    
+            # adding to one vector
+            pred = torch.cat([pred, pred_vertex], dim=-1)
+
+            # calculating the loss
+            normal_loss, vertex_loss = plane_loss(pred, gt, data['trans'])
+
+            # tracking progress
+            m_normal_loss += normal_loss.mean(0).item()
+            m_vertex_loss += vertex_loss.mean(0).item()
+            m_loss += (normal_loss.mean(0).item() + vertex_loss.mean(0).item())
+
+        # epoch average scores   
+        m_loss        /= len(valid_loader)
+        m_normal_loss /= len(valid_loader)
+        m_vertex_loss /= len(valid_loader)
+        print(f" ----------- | Validation: Total loss = {m_loss} Normal loss: {m_normal_loss} | Vertex loss: {m_vertex_loss}")
+        
+        lossValidValues.append(m_loss)
 
     if epoch == opt.nepoch - 1:
         torch.save(regressor.state_dict(), '%s/pla_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'plane train loss', os.path.join(opt.outf, 'pla_train_loss.png'))
-vis_curve(lossTestValues, 'plane test loss - all (normal cosine)', os.path.join(opt.outf, 'pla_test_loss_all.png'))
-
-running_loss = 0
-cont = 0
-
-for i,data in tqdm(enumerate(testdataloader, 0)):
-    target_normal, target_xyz, points = data
-    points = points[0].transpose(2, 1)
-    points, target_normal, target_xyz = \
-        points.cuda().float(), target_normal.cuda().float(), target_xyz.cuda().float()
-    regressor = regressor.eval()
-    pred_normal, pred_xyz = regressor(points)
-    
-    t = np.squeeze(target_normal.detach().cpu().numpy())
-    p = np.squeeze(pred_normal.detach().cpu().numpy())
-    norm_p = np.linalg.norm(p)
-    p = p/norm_p
-    angle = 180*np.arccos(t.dot(p))/np.pi
-    print(f'{t} -> {p}->{angle}')
-
-    pred = torch.cat([pred_normal, pred_xyz], dim=1)
-    gt = torch.cat([target_normal, target_xyz], dim=1)
-    loss_normal, loss_xyz = plane_loss(pred, gt, None)
-    loss = loss_normal.mean(0)# + loss_xyz.mean(0)
-    running_loss += loss.item()
-    cont = cont + 1
-    
-print("final loss {}".format(running_loss / float(cont)))
+vis_curve(lossValidValues, 'plane validation loss', os.path.join(opt.outf, 'pla_valid_loss.png'))

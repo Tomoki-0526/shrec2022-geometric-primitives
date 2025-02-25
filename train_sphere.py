@@ -1,19 +1,20 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 import argparse
 import random
 import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from dataset import DatasetSphere
+from dataset import DatasetSphere, train_transforms, valid_transforms
 from model.model import SphereRegressor
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import SphereLoss
+from utils import minkowski_collate, create_input_batch
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -48,29 +49,33 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-dataset = DatasetSphere(
+train_dataset = DatasetSphere(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train', transform=False)
+        split='train', 
+        transform=train_transforms)
 
-test_dataset = DatasetSphere(
+valid_dataset = DatasetSphere(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points, transform=False)
+        npoints=opt.num_points, 
+        transform=train_transforms)
 
-dataloader = torch.utils.data.DataLoader(
-    dataset,
+train_loader = torch.utils.data.DataLoader(
+    train_dataset,
     batch_size=opt.batchSize,
     shuffle=True,
+    collate_fn=minkowski_collate,
     num_workers=int(opt.workers))
 
-testdataloader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=1,
-        shuffle=True,
-        num_workers=int(opt.workers))
+valid_loader = torch.utils.data.DataLoader(
+    valid_dataset,
+    batch_size=1,
+    shuffle=False,
+    collate_fn=minkowski_collate,
+    num_workers=int(opt.workers))
 
-print(len(dataset), len(test_dataset))
+print(len(train_dataset), len(valid_dataset))
 
 try:
     os.makedirs(opt.outf)
@@ -78,9 +83,10 @@ except OSError:
     pass
 
 regressor = SphereRegressor()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     regressor = torch.nn.DataParallel(regressor)
-    print(f'Let\'s use {torch.cuda.device_count()} gpus!')
+print(f'Let\'s use {torch.cuda.device_count()} gpu(s)!')
 
 if opt.model != '':
     regressor.load_state_dict(torch.load(opt.model))
@@ -92,122 +98,113 @@ regressor.cuda()
 
 sphere_loss = SphereLoss()
 
-num_batch = len(dataset) / opt.batchSize
+num_batch = len(train_dataset) / opt.batchSize
 
 lossTrainValues = []
-lossTestValues = []
+lossTrainCenterValues = []
+lossTrainRadiusValues = []
+lossValidValues = []
+lossValidCenterValues = []
+lossValidRadiusValues = []
 
 for epoch in range(opt.nepoch):
-    running_loss = 0
-    cont = 0
+    # for loss and accuracy tracking the training set
+    m_loss = 0
+    m_center_loss = 0
+    m_radius_loss = 0
 
-    scheduler.step()
-    for i, data in enumerate(dataloader, 0):
-        target_center, target_radius, points = data
-        
-        points = points.transpose(2, 1)
-        points = points.cuda().float()
-        target_center = target_center.cuda().float()
-        target_radius = torch.unsqueeze(target_radius, 1)
-        target_radius = target_radius.cuda().float()
-        
+    for i, data in tqdm(enumerate(train_loader, 0)):
         optimizer.zero_grad()
         regressor = regressor.train()
-        pred_center, pred_radius = regressor(points)
 
-        pred = torch.cat([pred_radius, pred_center], dim=1)
-        gt = torch.cat([target_radius, target_center], dim=1)
-        loss_center, loss_radius = sphere_loss(pred, gt, None)
-        loss = loss_center.mean(0) + loss_radius.mean(0)
+        # reading the data and formating them
+        labels = data['labels'].to(device)
+        gt = labels[:, 1:]
+        minknet_input = create_input_batch(
+            data, 
+            device=device,
+            quantization_size=0.05
+        )
+
+        # activating network
+        pred = regressor(minknet_input)
+
+        # calculating losses
+        c_loss, r_loss = sphere_loss(pred, gt, data["trans"])
+        c_loss = c_loss.mean(0)
+        r_loss = r_loss.mean(0)
+                
+        loss = r_loss + c_loss
+        
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
-        running_loss += loss.item()
-        cont += 1
-
-    lossTrainValues.append(running_loss / float(cont))
-
-    #Validation after one epoch
-    running_loss = 0
-    
-    cont = 0
-    for i,data in tqdm(enumerate(testdataloader, 0)):
-        target_center, target_radius, points = data
         
-        points = points.transpose(2, 1)
-        points = points.cuda().float()
-        target_center = target_center.cuda().float()
-        target_radius = target_radius.cuda().float()
-        target_radius = torch.unsqueeze(target_radius, 1)
+        m_center_loss += c_loss.item()
+        m_radius_loss += r_loss.item()
+        m_loss += loss.item()
+
+    # stepping the scheduler
+    scheduler.step()
+
+    # epoch average scores
+    m_loss /= len(train_loader)
+    m_center_loss /= len(train_loader)
+    m_radius_loss /= len(train_loader)
+    print(f" Epoch: {epoch} | Training: Total loss = {m_loss}, Center loss: {m_center_loss}, Radius loss: {m_radius_loss}")
+
+    lossTrainValues.append(m_loss)
+    lossTrainCenterValues.append(m_center_loss)
+    lossTrainRadiusValues.append(m_radius_loss)
+
+    # Validation after one epoch
+    with torch.no_grad():
+        # for loss and accuracy tracking the validation set
+        m_loss = 0
+        m_center_loss = 0
+        m_radius_loss = 0
+
         regressor = regressor.eval()
-        pred_center, pred_radius  = regressor(points)
 
-        pred = torch.cat([pred_radius, pred_center], dim=1)
-        gt = torch.cat([target_radius, target_center], dim=1)
-        loss_center, loss_radius = sphere_loss(pred, gt, None)
-        loss = loss_center.mean(0) + loss_radius.mean(0)
+        for i, data in enumerate(valid_loader, 0):
+            # reading the data and formating them
+            labels = data['labels'].to(device)
+            gt = labels[:, 1:]
+            minknet_input = create_input_batch(
+                data, 
+                device=device,
+                quantization_size=0.05
+            )
 
-        running_loss += loss.item()
+            # activating network
+            pred = regressor(minknet_input)
+
+            # calculating losses
+            c_loss, r_loss = sphere_loss(pred, gt, data["trans"])
+            c_loss = c_loss.mean(0)
+            r_loss = r_loss.mean(0)
+
+            loss = r_loss + c_loss
+
+            # tracking progress
+            m_center_loss += c_loss.item()
+            m_radius_loss += r_loss.item()
+            m_loss += loss.item()
+
+        m_loss        /= len(valid_loader)
+        m_center_loss /= len(valid_loader)
+        m_radius_loss /= len(valid_loader)
+        print(f" -------- | Validation: Total loss = {m_loss}, Center loss: {m_center_loss}, Radius loss: {m_radius_loss}")
         
-        cont = cont + 1
-    
-    lossTestValues.append(running_loss/float(cont))
-    
-    if epoch == opt.nepoch - 1:
-        torch.save(regressor.state_dict(), '%s/sph_model_%d.pth' % (opt.outf, epoch))
+        lossValidValues.append(m_loss)
+        lossValidCenterValues.append(m_center_loss)
+        lossValidRadiusValues.append(m_radius_loss)
+        
+        if epoch == opt.nepoch - 1:
+            torch.save(regressor.state_dict(), '%s/sph_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'sphere train loss', os.path.join(opt.outf, 'sph_train_loss.png'))
-vis_curve(lossTestValues, 'sphere test loss - all', os.path.join(opt.outf, 'sph_test_loss_all.png'))
-
-running_loss = 0
-
-cont = 0
-center_err = 0
-radius_err = 0
-
-centers = []
-radii = []
-
-for i,data in tqdm(enumerate(testdataloader, 0)):
-    target_center, target_radius, points = data
-    print(points.shape)
-    
-    points = points.transpose(2, 1)
-    points = points.cuda().float()
-    target_center = target_center.cuda().float()
-    target_radius = target_radius.cuda().float()
-    
-    regressor = regressor.eval()
-    pred_center, pred_radius = regressor(points)
-    
-    t = np.squeeze(target_center.detach().cpu().numpy())
-    p = np.squeeze(pred_center.detach().cpu().numpy())
-
-    t1 = np.squeeze(target_radius.detach().cpu().numpy())
-    p1 = np.squeeze(pred_radius.detach().cpu().numpy())
-
-    c1 = np.linalg.norm(t-p)
-    c2 = np.linalg.norm(t1-p1)
-
-    center_err += c1
-    radius_err += c2
-    centers.append(c1)
-    radii.append(c2)
-
-    print(f'{t} -> {p}->({t1},{p1})')
-
-    running_loss += loss.item()
-    cont = cont + 1
-    
-print("final accuracy {}".format(running_loss / float(cont)))
-print("average center error {}".format(center_err / float(cont)))
-print("average radius error {}".format(radius_err / float(cont)))
-
-fig1, axes = plt.subplots(1,2)
-axes[0].hist(centers, 50)
-
-axes[1].hist(radii, 50)
-plt.show()
-
-
-
+vis_curve(lossTrainCenterValues, 'sphere train center loss', os.path.join(opt.outf, 'sph_train_center_loss.png'))
+vis_curve(lossTrainRadiusValues, 'sphere train radius loss', os.path.join(opt.outf, 'sph_train_radius_loss.png'))
+vis_curve(lossValidValues, 'sphere validation loss', os.path.join(opt.outf, 'sph_valid_loss.png'))
+vis_curve(lossValidCenterValues, 'sphere validation center loss', os.path.join(opt.outf, 'sph_valid_center_loss.png'))
+vis_curve(lossValidRadiusValues, 'sphere validation radius loss', os.path.join(opt.outf, 'sph_valid_radius_loss.png'))

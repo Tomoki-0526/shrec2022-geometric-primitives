@@ -233,7 +233,7 @@ class DatasetSHREC2022(data.Dataset):
         
         return self.classes[idx],norm_points
 
-#Dataset class for the plane regression
+# Dataset class for the plane regression
 class DatasetPlane(data.Dataset):
     def __init__(self, root, npoints=2048, split='train', transform=[]):
         self.root = root
@@ -284,7 +284,7 @@ class DatasetPlane(data.Dataset):
 
         return data
 
-#Dataset class for the cylinder regression
+# Dataset class for the cylinder regression
 class DatasetCylinder(data.Dataset):
     def __init__(self, root, npoints=2048, split='train', transform=[]):
         self.root = root
@@ -337,8 +337,62 @@ class DatasetCylinder(data.Dataset):
             data = t(data)
 
         return data
+    
+# Dataset class for the sphere regression
+class DatasetSphere(data.Dataset):
+    def __init__(self, root, npoints=2048, split='train', transform=[]):
+        self.root = root
+        self.npoints = npoints
+        self.split = split
+        self.transform = transform
+        self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
+        self.filesplit = []
+        
+        print(len(self.filepaths))
+        self.objectClass = dict()
+        
+        for i in range(5):
+            self.objectClass[i] = []
+            
+        for filename in self.filepaths:
+            gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+            gtfile = os.path.normpath(gtfile)
+            
+            with open(gtfile, 'r') as f:
+                cl = f.readline()
+            self.objectClass[int(cl)-1].append(filename)
 
-#Dataset class for the cone regression
+        self.classes = []
+
+        if self.split == 'train':
+            self.filesplit.extend(self.objectClass[2][:7360])
+        elif self.split == 'val':
+            self.filesplit.extend(self.objectClass[2][7360:])
+            
+    def __len__(self):
+        return len(self.filesplit)
+    
+    def __getitem__(self, idx):
+        filename = self.filesplit[idx]
+
+        pcd = np.loadtxt(filename, delimiter=',')
+        
+        if self.npoints != 0:
+            pcd = resample_pcd(pcd, self.npoints)
+        pcd = torch.from_numpy(pcd).float()
+        
+        gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+        gtfile = os.path.normpath(gtfile)
+        label = parse_label(gtfile)
+
+        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
+        
+        for t in self.transform:
+            data = t(data)
+
+        return data
+
+# Dataset class for the cone regression
 class DatasetCone(data.Dataset):
     def __init__(self, root, npoints=2048, split='train', transform=[]):
         self.root = root
@@ -391,60 +445,7 @@ class DatasetCone(data.Dataset):
 
         return data
 
-#Dataset class for the sphere regression
-class DatasetSphere(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
-        self.root = root
-        self.npoints = npoints
-        self.split = split
-        self.transform = transform
-        self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
-        self.filesplit = []
-        
-        print(len(self.filepaths))
-        self.objectClass = dict()
-        
-        for i in range(5):
-            self.objectClass[i] = []
-            
-        for filename in self.filepaths:
-            gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
-            gtfile = os.path.normpath(gtfile)
-            
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
-            self.objectClass[int(cl)-1].append(filename)
-
-        self.classes = []
-
-        if self.split == 'train':
-            self.filesplit.extend(self.objectClass[2][:7360])
-        elif self.split == 'val':
-            self.filesplit.extend(self.objectClass[2][7360:])
-            
-    def __len__(self):
-        return len(self.filesplit)
-    
-    def __getitem__(self, idx):
-        filename = self.filesplit[idx]
-
-        pcd = np.loadtxt(filename, delimiter=',')
-        
-        if self.npoints != 0:
-            pcd = resample_pcd(pcd, self.npoints)
-        
-        gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
-        gtfile = os.path.normpath(gtfile)
-        label = parse_label(gtfile) if self.split == 'train' else {'data': None}
-
-        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
-        
-        for t in self.transform:
-            data = t(data)
-
-        return data
-
-#Dataset class for the torus regression
+# Dataset class for the torus regression
 class DatasetTorus(data.Dataset):
     def __init__(self, root, npoints=2048, split='train', transform=[]):
         self.root = root

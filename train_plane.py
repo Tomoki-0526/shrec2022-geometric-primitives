@@ -155,14 +155,14 @@ for epoch in range(opt.nepoch):
 
     # Validation after one epoch
     with torch.no_grad():
-        # for loss and accuracy tracking the training set
+        # for loss and accuracy tracking the validation set
         m_loss = 0
         m_vertex_loss = 0
         m_normal_loss = 0
 
         regressor = regressor.eval()
     
-        for i, data in tqdm(enumerate(valid_loader, 0)):
+        for i, data in enumerate(valid_loader, 0):
             # reading the data and formating them
             labels = data['labels'].to(device)
             gt = labels[:, 1:]

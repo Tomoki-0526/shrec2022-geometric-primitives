@@ -69,11 +69,11 @@ train_loader = torch.utils.data.DataLoader(
     num_workers=int(opt.workers))
 
 valid_loader = torch.utils.data.DataLoader(
-        valid_dataset,
-        batch_size=1,
-        shuffle=False,
-        collate_fn=minkowski_collate,
-        num_workers=int(opt.workers))
+    valid_dataset,
+    batch_size=1,
+    shuffle=False,
+    collate_fn=minkowski_collate,
+    num_workers=int(opt.workers))
 
 print(len(train_dataset), len(valid_dataset))
 
@@ -153,8 +153,9 @@ for epoch in range(opt.nepoch):
 
     lossTrainValues.append(m_loss)
 
-    #Validation after one epoch
+    # Validation after one epoch
     with torch.no_grad():
+        # for loss and accuracy tracking the training set
         m_loss = 0
         m_vertex_loss = 0
         m_normal_loss = 0
@@ -162,6 +163,7 @@ for epoch in range(opt.nepoch):
         regressor = regressor.eval()
     
         for i, data in tqdm(enumerate(valid_loader, 0)):
+            # reading the data and formating them
             labels = data['labels'].to(device)
             gt = labels[:, 1:]
             minknet_input = create_input_batch(
@@ -190,12 +192,12 @@ for epoch in range(opt.nepoch):
         m_loss        /= len(valid_loader)
         m_normal_loss /= len(valid_loader)
         m_vertex_loss /= len(valid_loader)
-        print(f" ----------- | Validation: Total loss = {m_loss} Normal loss: {m_normal_loss} | Vertex loss: {m_vertex_loss}")
+        print(f" --------- | Validation: Total loss = {m_loss}, Normal loss: {m_normal_loss}, Vertex loss: {m_vertex_loss}")
         
         lossValidValues.append(m_loss)
 
-    if epoch == opt.nepoch - 1:
-        torch.save(regressor.state_dict(), '%s/pla_model_%d.pth' % (opt.outf, epoch))
+        if epoch == opt.nepoch - 1:
+            torch.save(regressor.state_dict(), '%s/pla_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'plane train loss', os.path.join(opt.outf, 'pla_train_loss.png'))
 vis_curve(lossValidValues, 'plane validation loss', os.path.join(opt.outf, 'pla_valid_loss.png'))

@@ -325,10 +325,11 @@ class DatasetCylinder(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
+        pcd = torch.from_numpy(pcd).float()
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
-        label = parse_label(gtfile) if self.split == 'train' else {'data': None}
+        label = parse_label(gtfile)
 
         data = {'x': pcd, 'y': label['data'], 'index': idx+1}
         

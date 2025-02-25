@@ -1,19 +1,20 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 import argparse
 import random
 import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from dataset import DatasetCone
+from dataset import DatasetCone, train_transforms, valid_transforms
 from model.model import ConeRegressor
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import ConeLoss
+from utils import minkowski_collate, create_input_batch
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -48,29 +49,33 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-dataset = DatasetCone(
+train_dataset = DatasetCone(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train', transform=False)
+        split='train',
+        transform=train_transforms)
 
-test_dataset = DatasetCone(
+valid_dataset = DatasetCone(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points, transform=False)
+        npoints=opt.num_points,
+        transform=valid_transforms)
 
-dataloader = torch.utils.data.DataLoader(
-    dataset,
+train_loader = torch.utils.data.DataLoader(
+    train_dataset,
     batch_size=opt.batchSize,
     shuffle=True,
+    collate_fn=minkowski_collate,
     num_workers=int(opt.workers))
 
-testdataloader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=1,
-        shuffle=True,
-        num_workers=int(opt.workers))
+valid_loader = torch.utils.data.DataLoader(
+    valid_dataset,
+    batch_size=1,
+    shuffle=False,
+    collate_fn=minkowski_collate,
+    num_workers=int(opt.workers))
 
-print(len(dataset), len(test_dataset))
+print(len(train_dataset), len(valid_dataset))
 
 try:
     os.makedirs(opt.outf)
@@ -78,9 +83,10 @@ except OSError:
     pass
 
 regressor = ConeRegressor()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     regressor = torch.nn.DataParallel(regressor)
-    print(f'Let\'s use {torch.cuda.device_count()} gpus!')
+print(f'Let\'s use {torch.cuda.device_count()} gpu(s)!')
 
 if opt.model != '':
     regressor.load_state_dict(torch.load(opt.model))
@@ -92,122 +98,125 @@ regressor.cuda()
 
 cone_loss = ConeLoss()
 
-num_batch = len(dataset) / opt.batchSize
+num_batch = len(train_dataset) / opt.batchSize
 
 lossTrainValues = []
-lossTestValues = []
-delta = 1/256
+lossTrainAxisValues = []
+lossTrainVertexValues = []
+lossTrainThetaValues = []
+lossValidValues = []
+lossValidAxisValues = []
+lossValidVertexValues = []
+lossValidThetaValues = []
 
 for epoch in range(opt.nepoch):
-    running_loss = 0
-    cont = 0
-    scheduler.step()
-    for i, data in enumerate(dataloader, 0):
-        target_normal, target_vertex, target_aperture, points = data
-        points = points.transpose(2, 1)
-        target_aperture = torch.unsqueeze(target_aperture, 1)
-        points, target_normal = points.cuda().float(), target_normal.cuda().float()
-        target_vertex = target_vertex.cuda().float()
-        target_aperture = target_aperture.cuda().float()
-        
+    # for loss and accuracy tracking the training set
+    m_loss = 0
+    m_axis_loss = 0
+    m_vertex_loss = 0
+    m_theta_loss = 0
+    
+    for i, data in tqdm(enumerate(train_loader, 0)):
         optimizer.zero_grad()
         regressor = regressor.train()
-        pred_normal, pred_vertex, pred_aperture = regressor(points)
-        
-        pred = torch.cat([pred_aperture, pred_normal, pred_vertex], dim=1)
-        gt = torch.cat([target_aperture, target_normal, target_vertex], dim=1)
-        loss_normal, loss_vertex, loss_aper = cone_loss(pred, gt, None)
-        loss = loss_normal.mean(0) + loss_vertex.mean(0) + loss_aper.mean(0)
+
+        # reading the data and formating them
+        labels = data['labels'].to(device)
+        gt = labels[:, 1:]
+        minknet_input = create_input_batch(
+            data, 
+            device=device,
+            quantization_size=0.05
+        )
+
+        # activating network
+        pred = regressor(minknet_input)
+
+        # calculating losses
+        a_loss, v_loss, t_loss = cone_loss(pred, gt, data["trans"])
+        a_loss = a_loss.mean(0)
+        v_loss = v_loss.mean(0)
+        t_loss = t_loss.mean(0)
+
+        loss = a_loss + v_loss + t_loss
+
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
-        running_loss += loss.item()
-        cont += 1
+        
+        m_axis_loss += a_loss.item()
+        m_vertex_loss += v_loss.item()
+        m_theta_loss += t_loss.item()
+        m_loss += loss.item()
 
-    lossTrainValues.append(running_loss / float(cont))
+    # stepping the scheduler
+    scheduler.step()
 
-    #Validation after one epoch
-    running_loss = 0
+    m_loss /= len(train_loader)
+    m_axis_loss /= len(train_loader)
+    m_vertex_loss /= len(train_loader)
+    m_theta_loss /= len(train_loader)
+    print(f" Epoch: {epoch} | Training: Total loss = {m_loss}, Axis loss: {m_axis_loss}, Vertex loss: {m_vertex_loss}, Theta loss: {m_theta_loss}")
 
-    cont = 0
-    for i,data in tqdm(enumerate(testdataloader, 0)):
-        target_normal, target_vertex, target_aperture, points = data
-        points = points.transpose(2, 1)
-        target_aperture = torch.unsqueeze(target_aperture, 1)
-        points, target_normal = points.cuda().float(), target_normal.cuda().float()
-        target_vertex = target_vertex.cuda().float()
-        target_aperture = target_aperture.cuda().float()
+    lossTrainValues.append(m_loss)
+    lossTrainAxisValues.append(m_axis_loss)
+    lossTrainVertexValues.append(m_vertex_loss)
+    lossTrainThetaValues.append(m_theta_loss)
+
+    # Validation after one epoch
+    with torch.no_grad():
+        # for loss and accuracy tracking the validation set
+        m_loss = 0
+        m_axis_loss = 0
+        m_vertex_loss = 0
+        m_theta_loss = 0
 
         regressor = regressor.eval()
+
+        for i, data in enumerate(valid_loader, 0):
+            # reading the data and formating them
+            labels = data["labels"].to(device)
+            gt = labels[:,1:]
+            minknet_input = create_input_batch(
+                data, 
+                device=device,
+                quantization_size=0.05
+            )
+
+            # activating network
+            pred = regressor(minknet_input)
+
+            # calculating losses
+            a_loss, v_loss, t_loss = cone_loss(pred, gt, data["trans"])
+            a_loss = a_loss.mean(0)
+            v_loss = v_loss.mean(0)
+            t_loss = t_loss.mean(0)
+
+            loss = a_loss + v_loss + t_loss
+
+            m_axis_loss += a_loss.item()
+            m_vertex_loss += v_loss.item()
+            m_theta_loss += t_loss.item()
+            m_loss += loss.item()
+
+        m_loss        /= len(valid_loader)
+        m_axis_loss   /= len(valid_loader)
+        m_vertex_loss /= len(valid_loader)
+        m_theta_loss  /= len(valid_loader)
+        print(f" -------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, Vertex loss: {m_vertex_loss}, Theta loss: {m_theta_loss}")
         
-        pred_normal, pred_vertex, pred_aperture = regressor(points)
+        lossValidValues.append(m_loss)
+        lossValidAxisValues.append(m_axis_loss)
+        lossValidVertexValues.append(m_vertex_loss)
+        lossValidThetaValues.append(m_theta_loss)
 
-        pred = torch.cat([pred_aperture, pred_normal, pred_vertex], dim=1)
-        gt = torch.cat([target_aperture, target_normal, target_vertex], dim=1)
-        loss_normal, loss_vertex, loss_aper = cone_loss(pred, gt, None)
-        loss = loss_normal.mean(0) + loss_vertex.mean(0) + loss_aper.mean(0)
-
-        running_loss += loss.item()
-
-        cont = cont + 1
-    
-    lossTestValues.append(running_loss/float(cont))
-
-    if epoch == opt.nepoch - 1:
-        torch.save(regressor.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
+        if epoch == opt.nepoch - 1:
+            torch.save(regressor.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'cone train loss', os.path.join(opt.outf, 'con_train_loss.png'))
-vis_curve(lossTestValues, 'cone test loss - all', os.path.join(opt.outf, 'con_test_loss_all.png'))
-
-angle_err = 0
-point_err = 0
-ape_err = 0
-
-angles = []
-distances = []
-apertures = []
-
-cont = 0
-
-for i,data in tqdm(enumerate(testdataloader, 0)):
-    target_normal, target_center, target_aperture, points = data
-    points = points.transpose(2, 1)
-    points, target_normal = points.cuda().float(), target_normal.cuda().float()
-    target_center, target_aperture = target_center.cuda().float(), target_aperture.cuda().float()
-
-    regressor = regressor.eval()
-    pred_normal, pred_center, pred_aperture = regressor(points)
-    
-    t = np.squeeze(target_normal.detach().cpu().numpy())
-    p = np.squeeze(pred_normal.detach().cpu().numpy()) 
-    norm_p = np.linalg.norm(p)
-    p = p/norm_p
-    angle = 180*np.arccos(t.dot(p))/np.pi
-    angles.append(angle)
-    angle_err += angle
-
-    t1 = np.squeeze(target_center.detach().cpu().numpy())
-    p1 = np.squeeze(pred_center.detach().cpu().numpy()) 
-    dist = np.linalg.norm(t1-p1)
-    distances.append(dist)
-    point_err += dist
-
-    t2 = np.squeeze(target_aperture.detach().cpu().numpy())
-    p2 = np.squeeze(pred_aperture.detach().cpu().numpy()) 
-    dist2 = np.linalg.norm(t2-p2)
-    apertures.append(dist2)
-    ape_err += dist2
-
-    print(f'{t} -> {p}->{angle}')
-    cont = cont + 1
-    
-print("average angle error {}".format(angle_err / float(cont)))
-print("average point error {}".format(point_err / float(cont)))
-print("average radii error {}".format(ape_err / float(cont)))
-
-
-fig,axes = plt.subplots(1,3)
-axes[0].hist(angles, 50)
-axes[1].hist(distances, 50)
-axes[2].hist(apertures, 50)
-plt.show()
+vis_curve(lossTrainAxisValues, 'cone train axis loss', os.path.join(opt.outf, 'con_train_axis_loss.png'))
+vis_curve(lossTrainVertexValues, 'cone train vertex loss', os.path.join(opt.outf, 'con_train_vertex_loss.png'))
+vis_curve(lossTrainThetaValues, 'cone train theta loss', os.path.join(opt.outf, 'con_train_theta_loss.png'))
+vis_curve(lossValidValues, 'cone validation loss', os.path.join(opt.outf, 'con_valid_loss.png'))
+vis_curve(lossValidAxisValues, 'cone validation axis loss', os.path.join(opt.outf, 'con_valid_axis_loss.png'))
+vis_curve(lossValidVertexValues, 'cone validation vertex loss', os.path.join(opt.outf, 'con_valid_vertex_loss.png'))
+vis_curve(lossValidThetaValues, 'cone validation theta loss', os.path.join(opt.outf, 'con_valid_theta_loss.png'))

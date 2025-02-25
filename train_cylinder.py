@@ -108,7 +108,6 @@ lossValidValues = []
 lossValidAxisValues = []
 lossValidVertexValues = []
 lossValidRadiusValues = []
-delta = 1/256
 
 for epoch in range(opt.nepoch):
     # for loss and accuracy tracking the training set

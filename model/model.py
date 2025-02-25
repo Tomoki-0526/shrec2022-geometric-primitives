@@ -53,6 +53,7 @@ class ConeRegressor(nn.Module):
     def forward(self, x):
         return self.embedding(x)
 
+
 class TorusRegressor(nn.Module):
     def __init__(self):
         super(TorusRegressor, self).__init__()

@@ -59,7 +59,7 @@ valid_dataset = DatasetSphere(
         root=opt.dataset,
         split='val',
         npoints=opt.num_points, 
-        transform=train_transforms)
+        transform=valid_transforms)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,

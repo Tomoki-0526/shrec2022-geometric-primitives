@@ -1,19 +1,20 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 import argparse
 import random
 import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from dataset import DatasetTorus
+from dataset import DatasetTorus, train_transforms, valid_transforms
 from model.model import TorusRegressor
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import TorusLoss
+from utils import minkowski_collate, create_input_batch
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -48,29 +49,33 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-dataset = DatasetTorus(
+train_dataset = DatasetTorus(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train', transform=False)
+        split='train',
+        transform=train_transforms)
 
-test_dataset = DatasetTorus(
+valid_dataset = DatasetTorus(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points, transform=False)
+        npoints=opt.num_points,
+        transform=valid_transforms)
 
-dataloader = torch.utils.data.DataLoader(
-    dataset,
+train_loader = torch.utils.data.DataLoader(
+    train_dataset,
     batch_size=opt.batchSize,
     shuffle=True,
+    collate_fn=minkowski_collate,
     num_workers=int(opt.workers))
 
-testdataloader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=1,
-        shuffle=True,
-        num_workers=int(opt.workers))
+valid_loader = torch.utils.data.DataLoader(
+    valid_dataset,
+    batch_size=1,
+    shuffle=False,
+    collate_fn=minkowski_collate,
+    num_workers=int(opt.workers))
 
-print(len(dataset), len(test_dataset))
+print(len(train_dataset), len(valid_dataset))
 
 try:
     os.makedirs(opt.outf)
@@ -78,9 +83,10 @@ except OSError:
     pass
 
 regressor = TorusRegressor()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     regressor = torch.nn.DataParallel(regressor)
-    print(f'Let\'s use {torch.cuda.device_count()} gpus!')
+print(f'Let\'s use {torch.cuda.device_count()} gpu(s)!')
 
 if opt.model != '':
     regressor.load_state_dict(torch.load(opt.model))
@@ -92,134 +98,139 @@ regressor.cuda()
 
 torus_loss = TorusLoss()
 
-num_batch = len(dataset) / opt.batchSize
+num_batch = len(train_dataset) / opt.batchSize
 
 lossTrainValues = []
-lossTestValues = []
+lossTrainCenterValues = []
+lossTrainAxisValues = []
+lossTrainMinorValues = []
+lossTrainMajorValues = []
+lossValidValues = []
+lossValidCenterValues = []
+lossValidAxisValues = []
+lossValidMinorValues = []
+lossValidMajorValues = []
 
 for epoch in range(opt.nepoch):
-    running_loss = 0
-    cont = 0
+    # for loss and accuracy tracking the training set
+    m_loss = 0
+    m_center_loss = 0
+    m_axis_loss   = 0
+    m_minor_loss = 0
+    m_major_loss = 0
 
-    scheduler.step()
-    for i, data in enumerate(dataloader, 0):
-        target_normal, target_point, target_radius_min, target_radius_max, points = data
-        
-        points = points.transpose(2, 1)
-        target_radius_min, target_radius_max = torch.unsqueeze(target_radius_min, 1), torch.unsqueeze(target_radius_max, 1)
-        points, target_normal, target_point = points.cuda().float(), target_normal.cuda().float(), target_point.cuda().float()
-        target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
-        
+    for i, data in tqdm(enumerate(train_loader, 0)):
         optimizer.zero_grad()
         regressor = regressor.train()
+
+        # reading the data and formating them
+        labels = data['labels'].to(device)
+        gt = labels[:, 1:]
+        minknet_input = create_input_batch(
+            data, 
+            device=device,
+            quantization_size=0.05
+        )
+
+        # activating network
+        pred = regressor(minknet_input)
+
+        # calculating losses
+        a_loss, c_loss, R_loss, r_loss = torus_loss(pred, gt, data["trans"])
+        a_loss = a_loss.mean(0)
+        c_loss = c_loss.mean(0)
+        r_loss = r_loss.mean(0)
+        R_loss = R_loss.mean(0)
+
+        loss = R_loss + r_loss + c_loss + a_loss
         
-        pred_normal, pred_point, pred_radius_min, pred_radius_max = regressor(points)
-        
-        pred = torch.cat([pred_radius_max, pred_radius_min, pred_normal, pred_point], dim=1)
-        gt = torch.cat([target_radius_max, target_radius_min, target_normal, target_point], dim=1)
-        loss_normal, loss_point, loss_R, loss_r = torus_loss(pred, gt, None)
-        loss = loss_normal.mean(0) + loss_point.mean(0) + loss_R.mean(0) + loss_r.mean(0)
         loss.backward()
         optimizer.step()
-        print('[%d: %d/%d] train loss: %f' % (epoch, i, num_batch, loss.item()))
-        running_loss += loss.item()
-        cont += 1
-
-        lossTrainValues.append(running_loss / float(cont))
-
-  
-    #Validation after one epoch
-    running_loss = 0
-
-    cont = 0
-    for i,data in tqdm(enumerate(testdataloader, 0)):
-        target_normal, target_point, target_radius_min, target_radius_max, points = data
         
-        points = points.transpose(2, 1)
-        target_radius_min, target_radius_max = torch.unsqueeze(target_radius_min, 1), torch.unsqueeze(target_radius_max, 1)
-        points, target_normal, target_point = points.cuda().float(), target_normal.cuda().float(), target_point.cuda().float()
-        target_radius_min, target_radius_max = target_radius_min.cuda().float(), target_radius_max.cuda().float()
-        
-        optimizer.zero_grad()
-        regressor = regressor.eval()
-        
-        pred_normal, pred_point, pred_radius_min, pred_radius_max = regressor(points)
-        pred = torch.cat([pred_radius_max, pred_radius_min, pred_normal, pred_point], dim=1)
-        gt = torch.cat([target_radius_max, target_radius_min, target_normal, target_point], dim=1)
-        loss_normal, loss_point, loss_R, loss_r = torus_loss(pred, gt, None)
-        loss = loss_normal.mean(0) + loss_point.mean(0) + loss_R.mean(0) + loss_r.mean(0)
+        m_center_loss += c_loss.item()
+        m_major_loss += R_loss.item()
+        m_minor_loss += r_loss.item()
+        m_axis_loss   += a_loss.item()
+        m_loss += loss.item()
 
-        running_loss += loss.item()
+    # stepping the scheduler
+    scheduler.step()
 
-        cont = cont + 1
+    m_loss /= len(train_loader)
+    m_center_loss /= len(train_loader)
+    m_axis_loss /= len(train_loader)
+    m_minor_loss /= len(train_loader)
+    m_major_loss /= len(train_loader)
+    print(f" Epoch: {epoch} | Training: Total loss = {m_loss}, Center loss: {m_center_loss}, Axis loss: {m_axis_loss}, Major radius loss: {m_major_loss}, Minor radius loss: {m_minor_loss}")
     
-    lossTestValues.append(running_loss/float(cont))
+    lossTrainValues.append(m_loss)
+    lossTrainCenterValues.append(m_center_loss)
+    lossTrainAxisValues.append(m_axis_loss)
+    lossTrainMinorValues.append(m_minor_loss)
+    lossTrainMajorValues.append(m_major_loss)
 
-    if epoch == opt.nepoch - 1:
-        torch.save(regressor.state_dict(), '%s/tor_model_%d.pth' % (opt.outf, epoch))
+    # Validation after one epoch
+    with torch.no_grad():
+        # for loss and accuracy tracking the training set
+        m_loss = 0
+        m_center_loss = 0
+        m_axis_loss   = 0
+        m_minor_loss = 0
+        m_major_loss = 0
+
+        regressor = regressor.eval()
+
+        for i,data in enumerate(valid_loader, 0):
+            # reading the data and formating them
+            labels = data["labels"].to(device)
+            gt = labels[:,1:]
+            minknet_input = create_input_batch(
+                data, 
+                device=device,
+                quantization_size=0.05
+            )
+
+            # activating network
+            pred = regressor(minknet_input)       
+
+            # calculating losses
+            a_loss, c_loss, R_loss, r_loss = torus_loss(pred, gt, data["trans"])
+            c_loss = c_loss.mean(0)
+            r_loss = r_loss.mean(0)
+            R_loss = R_loss.mean(0)
+            a_loss = a_loss.mean(0)
+
+            loss = R_loss + r_loss + c_loss + a_loss
+
+            m_center_loss += c_loss.item()
+            m_major_loss += R_loss.item()
+            m_minor_loss += r_loss.item()
+            m_axis_loss   += a_loss.item()
+            m_loss += loss.item()
+        
+        m_loss        /= len(valid_loader)
+        m_center_loss /= len(valid_loader)
+        m_axis_loss   /= len(valid_loader)
+        m_minor_loss  /= len(valid_loader)
+        m_major_loss  /= len(valid_loader)
+        print(f" -------- | Validation: loss = {m_loss}, Center loss: {m_center_loss}, Axis loss: {m_axis_loss}, Major radius loss: {m_major_loss}, Minor radius loss: {m_minor_loss}")
+        
+        lossValidValues.append(m_loss)
+        lossValidCenterValues.append(m_center_loss)
+        lossValidAxisValues.append(m_axis_loss)
+        lossValidMajorValues.append(m_major_loss)
+        lossValidMinorValues.append(m_minor_loss)
+
+        if epoch == opt.nepoch - 1:
+            torch.save(regressor.state_dict(), '%s/tor_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'torus train loss', os.path.join(opt.outf, 'tor_train_loss.png'))
-vis_curve(lossTestValues, 'torus test loss - all', os.path.join(opt.outf, 'tor_test_loss_all.png'))
-
-angle_err = 0
-point_err = 0
-min_err = 0
-max_err = 0
-
-angles = []
-distances = []
-mins = []
-maxs = []
-
-cont = 0
-
-for i,data in tqdm(enumerate(testdataloader, 0)):
-    target_normal, target_center, target_min, target_max, points = data
-    points = points.transpose(2, 1)
-    points, target_normal = points.cuda().float(), target_normal.cuda().float()
-    target_center, target_min, target_max = target_center.cuda().float(), target_min.cuda().float(), target_max.cuda().float()
-
-    regressor = regressor.eval()
-    pred_normal, pred_center, pred_min, pred_max = regressor(points)
-    
-    t = np.squeeze(target_normal.detach().cpu().numpy())
-    p = np.squeeze(pred_normal.detach().cpu().numpy()) 
-    norm_p = np.linalg.norm(p)
-    p = p/norm_p
-    angle = 180*np.arccos(t.dot(p))/np.pi
-    angles.append(angle)
-    angle_err += angle
-
-    t1 = np.squeeze(target_center.detach().cpu().numpy())
-    p1 = np.squeeze(pred_center.detach().cpu().numpy()) 
-    dist = np.linalg.norm(t1-p1)
-    distances.append(dist)
-    point_err += dist
-
-    t2 = np.squeeze(target_min.detach().cpu().numpy())
-    p2 = np.squeeze(pred_min.detach().cpu().numpy()) 
-    dist2 = np.linalg.norm(t2-p2)
-    mins.append(dist2)
-    min_err += dist2
-
-    t3 = np.squeeze(target_max.detach().cpu().numpy())
-    p3 = np.squeeze(pred_max.detach().cpu().numpy()) 
-    dist3 = np.linalg.norm(t3-p3)
-    mins.append(dist3)
-    max_err += dist3
-
-    print(f'{t} -> {p}->{angle}')
-    cont = cont + 1
-    
-print("average angle error {}".format(angle_err / float(cont)))
-print("average point error {}".format(point_err / float(cont)))
-print("average min error {}".format(min_err / float(cont)))
-print("average max error {}".format(max_err / float(cont)))
-
-
-fig,axes = plt.subplots(1,4)
-axes[0].hist(angles, 50)
-axes[1].hist(distances, 50)
-axes[2].hist(mins, 50)
-axes[3].hist(maxs, 50)
-plt.show()
+vis_curve(lossTrainCenterValues, 'torus train center loss', os.path.join(opt.outf, 'tor_train_center_loss.png'))
+vis_curve(lossTrainAxisValues, 'torus train axis loss', os.path.join(opt.outf, 'tor_train_axis_loss.png'))
+vis_curve(lossTrainMajorValues, 'torus train major radius loss', os.path.join(opt.outf, 'tor_train_major_loss.png'))
+vis_curve(lossTrainMinorValues, 'torus train minor radius loss', os.path.join(opt.outf, 'tor_train_minor_loss.png'))
+vis_curve(lossValidValues, 'torus validation loss', os.path.join(opt.outf, 'tor_valid_loss.png'))
+vis_curve(lossValidCenterValues, 'torus validation center loss', os.path.join(opt.outf, 'tor_valid_center_loss.png'))
+vis_curve(lossValidAxisValues, 'torus validation axis loss', os.path.join(opt.outf, 'tor_valid_axis_loss.png'))
+vis_curve(lossValidMajorValues, 'torus validation major radius loss', os.path.join(opt.outf, 'tor_valid_major_loss.png'))
+vis_curve(lossValidMinorValues, 'torus validation minor radius loss', os.path.join(opt.outf, 'tor_valid_minor_loss.png'))

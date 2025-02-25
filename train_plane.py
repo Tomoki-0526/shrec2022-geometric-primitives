@@ -192,7 +192,7 @@ for epoch in range(opt.nepoch):
         m_loss        /= len(valid_loader)
         m_normal_loss /= len(valid_loader)
         m_vertex_loss /= len(valid_loader)
-        print(f" --------- | Validation: Total loss = {m_loss}, Normal loss: {m_normal_loss}, Vertex loss: {m_vertex_loss}")
+        print(f" -------- | Validation: Total loss = {m_loss}, Normal loss: {m_normal_loss}, Vertex loss: {m_vertex_loss}")
         
         lossValidValues.append(m_loss)
 

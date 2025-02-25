@@ -205,7 +205,7 @@ for epoch in range(opt.nepoch):
         m_axis_loss   /= len(valid_loader)
         m_vertex_loss /= len(valid_loader)
         m_radius_loss /= len(valid_loader)
-        print(f" --------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, Vertex loss: {m_vertex_loss}, Radius loss: {m_radius_loss}")
+        print(f" -------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, Vertex loss: {m_vertex_loss}, Radius loss: {m_radius_loss}")
         
         lossValidValues.append(m_loss)
         lossValidAxisValues.append(m_axis_loss)

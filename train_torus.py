@@ -7,14 +7,13 @@ import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from dataset import DatasetTorus, train_transforms, valid_transforms
-from model.model import TorusRegressor
-import torch.nn.functional as F
+from dataset import DatasetTorus
+from model.models import TorusRegressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import TorusLoss
-from utils import minkowski_collate, create_input_batch
+from utils import *
 
 def vis_curve(curve, title, filename):
     plt.clf()

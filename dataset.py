@@ -4,28 +4,11 @@ import torch.utils.data as data
 import os
 import glob
 from numpy import linalg as LA
-import random
 import math
 import einops
-import transforms as t
 
 #####################################################################
 # M4 methods
-train_transforms = [t.KeepInitialPoints(),
-                    t.Translate(), 
-                    t.SphereNormalization(), 
-                    t.Initialization(),
-                    t.RandomRotate(180, 0),
-                    t.RandomRotate(180, 1),
-                    t.RandomRotate(180, 2),
-                    t.GaussianNoise(),
-                    t.GetMean()]
-
-valid_transforms = [t.KeepInitialPoints(),
-                    t.Translate(), 
-                    t.SphereNormalization(),
-                    t.GetMean()]
-
 def norm(x):
     return (x * x).sum(-1).sqrt()
 
@@ -188,13 +171,17 @@ def normalize2(points, unit_ball = False):
 
 # Dataset class for the classification problem    
 class DatasetSHREC2022(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train'):
+    def __init__(self, root, npoints=2048, split='train', transform=[]):
         self.root = root
         self.npoints = npoints
         self.split = split
         self.filepaths = sorted(glob.glob(self.root+'/pointCloud/*.txt'))
         self.filesplit = []
+        self.transform = transform
         
+        if self.split == 'test':
+            self.filesplit = self.filepaths
+            return
 
         self.objectClass = dict()
         
@@ -230,8 +217,17 @@ class DatasetSHREC2022(data.Dataset):
             pcd = resample_pcd(pcd, self.npoints)
         
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+
+        if self.split == 'test':
+            pcd = torch.from_numpy(pcd).float()
         
-        return self.classes[idx],norm_points
+            data = {'x': pcd, 'y': None, 'index': idx+1}
+            for t in self.transform:
+                data = t(data)
+
+            return -1, norm_points, data
+        
+        return self.classes[idx], norm_points
 
 # Dataset class for the plane regression
 class DatasetPlane(data.Dataset):

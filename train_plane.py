@@ -7,14 +7,13 @@ import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from dataset import DatasetPlane, train_transforms, valid_transforms
-from model.model import PlaneRegressor
-import torch.nn.functional as F
+from dataset import DatasetPlane
+from model.models import PlaneRegressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import PlaneLoss
-from utils import minkowski_collate, create_input_batch
+from utils import *
 
 def vis_curve(curve, title, filename):
     plt.clf()

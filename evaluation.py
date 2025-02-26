@@ -3,7 +3,7 @@ import torch
 import os
 from numpy import linalg as LA
 import argparse
-from model.model import Classifier, PlaneRegressor, CylinderRegressor, SphereRegressor, ConeRegressor, TorusRegressor
+from model.models import Classifier, PlaneRegressor, CylinderRegressor, SphereRegressor, ConeRegressor, TorusRegressor
 from time import time
 
 def resample_pcd(pcd, n):
@@ -54,7 +54,7 @@ input_pt, center, scale = normalize2(pcd, unit_ball=True)
 input_pt = torch.unsqueeze(torch.from_numpy(input_pt), 0)
 
 classifier = torch.nn.DataParallel(Classifier(num_classes=5))
-classifier.load_state_dict(torch.load('result/dgcnn/classification/cls_model_249.pth'))
+classifier.load_state_dict(torch.load('/home/szj/SHREC2022/log/dgcnn/classification/cls_model_249.pth'))
 classifier.cuda()
 
 input_pt = input_pt.transpose(2, 1)
@@ -71,7 +71,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     if pred_choice==0: #Plane
         #print('Shape is a plane')
         network = torch.nn.DataParallel(PlaneRegressor())
-        network.load_state_dict(torch.load("result/dgcnn/plane/pla_model_249.pth"))
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/plane/pla_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -96,7 +96,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==1: #Cylinder
         #print('Shape is a cylinder')
         network = torch.nn.DataParallel(CylinderRegressor())
-        network.load_state_dict(torch.load("result/dgcnn/cylinder/cyl_model_249.pth"))
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/cylinder/cyl_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -124,7 +124,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==2: #Sphere
         #print('Shape is a sphere')
         network = torch.nn.DataParallel(SphereRegressor())
-        network.load_state_dict(torch.load("result/dgcnn/sphere/sph_model_249.pth"))
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/sphere/sph_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -145,7 +145,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==3: #Cone
         #print('Shape is a cone')
         network = torch.nn.DataParallel(ConeRegressor())
-        network.load_state_dict(torch.load("result/dgcnn/cone/con_model_249.pth"))
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/cone/con_model_249.pth"))
         network.cuda()
 
         network = network.eval()
@@ -171,7 +171,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
         network = torch.nn.DataParallel(TorusRegressor())
-        network.load_state_dict(torch.load("result/dgcnn/torus/tor_model_249.pth"))
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/torus/tor_model_249.pth"))
         network.cuda()
 
         network = network.eval()

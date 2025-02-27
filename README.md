@@ -88,8 +88,8 @@ python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/hom
 ### Results
 
 M0: Efficient-RANSAC
-M3: PointNet
-M4: 3D ShapeNets
-M7: 
-M8: DGCNN
-M9: DGCNN + FCNN
+M1: PointNet
+M2: 3D ShapeNets
+M3: 
+M4: DGCNN
+M5: DGCNN + FCNN

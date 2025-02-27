@@ -77,12 +77,12 @@ You must change the input and output path inside the bash script, according to y
 ### Commands
 
 ```bash
-python train_classification.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/classification
-python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/plane
-python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/cylinder
-python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/sphere
-python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/cone
-python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/torus
+python train_classification.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/dgcnn/classification
+python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/fcnn/plane
+python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/fcnn/cylinder
+python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/fcnn/sphere
+python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/fcnn/cone
+python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/fcnn/torus
 ```
 
 ### Results

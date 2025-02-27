@@ -84,3 +84,12 @@ python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/ho
 python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/cone
 python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/${MODEL_TYPE}/torus
 ```
+
+### Results
+
+M0: Efficient-RANSAC
+M3: PointNet
+M4: 3D ShapeNets
+M7: 
+M8: DGCNN
+M9: DGCNN + FCNN

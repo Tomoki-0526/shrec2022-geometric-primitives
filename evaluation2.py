@@ -9,7 +9,7 @@ from loss import *
 # configuring paths for data and checkpoints
 data_path = "/home/szj/SHREC2022/dataset/test"
 checkpoint_path = "/home/szj/shrec2022-geometric-primitives/checkpoints"
-output_path = "/home/szj/SHREC2022/results/methods/M9/prediction_results"
+output_path = "/home/szj/SHREC2022/results/methods/M5/prediction_results"
 
 cls_checkpoint = os.path.join(checkpoint_path, "classification.pth")
 plane_checkpoint = os.path.join(checkpoint_path,"plane.pth")

@@ -6,6 +6,7 @@ import glob
 from numpy import linalg as LA
 import math
 import einops
+import re
 
 #####################################################################
 # M4 methods
@@ -175,7 +176,14 @@ class DatasetSHREC2022(data.Dataset):
         self.root = root
         self.npoints = npoints
         self.split = split
-        self.filepaths = sorted(glob.glob(self.root+'/pointCloud/*.txt'))
+        # self.filepaths = sorted(glob.glob(self.root+'/pointCloud/*.txt'))
+        input_files = glob.glob(self.root+'/pointCloud/pointCloud*.txt')
+        
+        def extract_number(f):
+            s = re.search(r'(\d+)', os.path.basename(f))
+            return int(s[0]) if s else 0
+        self.filepaths = sorted(input_files, key=extract_number)
+
         self.filesplit = []
         self.transform = transform
         

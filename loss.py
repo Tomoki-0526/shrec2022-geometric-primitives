@@ -238,6 +238,55 @@ class CylinderLoss(Losses):
         # print(r.shape, axis.shape, vertex.shape)
         return r, axis, vertex
 
+
+class SphereLoss(Losses):
+    
+
+    def __call__(self, sphere_pred, actual_sphere, trans):
+        
+        if trans is not None:
+            pred_r, pred_center = self.transform_sphere_outputs(sphere_pred, trans)
+        else:
+            pred_r, pred_center = sphere_pred[:, 0], sphere_pred[:, 1:4]
+
+
+        actual_r, actual_center = actual_sphere[:,0], actual_sphere[:,1:4] 
+        
+        c_loss = self.PointToPointLoss(pred_center, actual_center)
+        r_loss = self.ScalarToScalarLoss(pred_r, actual_r)
+
+
+        # print("Sphere: ")
+        # print("c, r: ", c_loss.shape, r_loss.shape)
+        
+        #return c_loss + r_loss
+        return c_loss, r_loss
+
+    def transform_sphere_outputs(self, sphere_pred, trans):
+        
+        #cyl_pred: B x 7
+        #scale: B x 1
+        #shift: B x 3
+        #rotation_mat: B x 3 x 3
+
+        scale, shift, rotation_mat = trans["norm_factors"], trans["shifts"], trans["inv_rotations"]
+
+        scale = scale.to(sphere_pred.device).unsqueeze(-1)
+        shift = shift.to(sphere_pred.device)
+        
+        r = sphere_pred[:,0]
+        center = sphere_pred[:,1:4]
+        
+        if rotation_mat is not None:
+            rotation_mat = rotation_mat.to(sphere_pred.device)
+        #applying inverse rotation, scaling and translation to vertices
+            center = (rotation_mat @ center.unsqueeze(-1)).squeeze(-1)
+        center = center * scale
+        center = center - shift
+        r = r * scale.squeeze()
+
+        return r, center
+    
     
 class ConeLoss(Losses):
     
@@ -297,55 +346,6 @@ class ConeLoss(Losses):
         vertex = vertex - shift
 
         return theta, axis, vertex
-
-
-class SphereLoss(Losses):
-    
-
-    def __call__(self, sphere_pred, actual_sphere, trans):
-        
-        if trans is not None:
-            pred_r, pred_center = self.transform_sphere_outputs(sphere_pred, trans)
-        else:
-            pred_r, pred_center = sphere_pred[:, 0], sphere_pred[:, 1:4]
-
-
-        actual_r, actual_center = actual_sphere[:,0], actual_sphere[:,1:4] 
-        
-        c_loss = self.PointToPointLoss(pred_center, actual_center)
-        r_loss = self.ScalarToScalarLoss(pred_r, actual_r)
-
-
-        # print("Sphere: ")
-        # print("c, r: ", c_loss.shape, r_loss.shape)
-        
-        #return c_loss + r_loss
-        return c_loss, r_loss
-
-    def transform_sphere_outputs(self, sphere_pred, trans):
-        
-        #cyl_pred: B x 7
-        #scale: B x 1
-        #shift: B x 3
-        #rotation_mat: B x 3 x 3
-
-        scale, shift, rotation_mat = trans["norm_factors"], trans["shifts"], trans["inv_rotations"]
-
-        scale = scale.to(sphere_pred.device).unsqueeze(-1)
-        shift = shift.to(sphere_pred.device)
-        
-        r = sphere_pred[:,0]
-        center = sphere_pred[:,1:4]
-        
-        if rotation_mat is not None:
-            rotation_mat = rotation_mat.to(sphere_pred.device)
-        #applying inverse rotation, scaling and translation to vertices
-            center = (rotation_mat @ center.unsqueeze(-1)).squeeze(-1)
-        center = center * scale
-        center = center - shift
-        r = r * scale.squeeze()
-
-        return r, center
 
     
 class TorusLoss(Losses):

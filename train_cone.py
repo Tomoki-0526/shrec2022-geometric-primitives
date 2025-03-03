@@ -8,12 +8,11 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCone
-from model.models import ConeRegressor
+from model.models import ConeNet
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from loss import ConeLoss
-from utils import *
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -52,26 +51,24 @@ train_dataset = DatasetCone(
         root=opt.dataset,
         npoints=opt.num_points,
         split='train',
-        transform=train_transforms)
+        transform=False)
 
 valid_dataset = DatasetCone(
         root=opt.dataset,
         split='val',
         npoints=opt.num_points,
-        transform=valid_transforms)
+        transform=False)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,
     batch_size=opt.batchSize,
     shuffle=True,
-    collate_fn=minkowski_collate,
     num_workers=int(opt.workers))
 
 valid_loader = torch.utils.data.DataLoader(
     valid_dataset,
     batch_size=1,
-    shuffle=False,
-    collate_fn=minkowski_collate,
+    shuffle=True,
     num_workers=int(opt.workers))
 
 print(len(train_dataset), len(valid_dataset))
@@ -81,19 +78,19 @@ try:
 except OSError:
     pass
 
-regressor = ConeRegressor()
+net = ConeNet()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
-    regressor = torch.nn.DataParallel(regressor)
+    net = torch.nn.DataParallel(net)
 print(f'Let\'s use {torch.cuda.device_count()} gpu(s)!')
 
 if opt.model != '':
-    regressor.load_state_dict(torch.load(opt.model))
+    net.load_state_dict(torch.load(opt.model))
 
 
-optimizer = optim.Adam(regressor.parameters(), lr=0.001, betas=(0.9, 0.999))
+optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-regressor.cuda()
+net.cuda()
 
 cone_loss = ConeLoss()
 
@@ -109,7 +106,6 @@ lossValidVertexValues = []
 lossValidThetaValues = []
 
 for epoch in range(opt.nepoch):
-    # for loss and accuracy tracking the training set
     m_loss = 0
     m_axis_loss = 0
     m_vertex_loss = 0
@@ -117,22 +113,20 @@ for epoch in range(opt.nepoch):
     
     for i, data in tqdm(enumerate(train_loader, 0)):
         optimizer.zero_grad()
-        regressor = regressor.train()
+        net = net.train()
 
-        # reading the data and formating them
-        labels = data['labels'].to(device)
-        gt = labels[:, 1:]
-        minknet_input = create_input_batch(
-            data, 
-            device=device,
-            quantization_size=0.05
-        )
+        gt_normal, gt_xyz, gt_theta, input_pts, center, scale = data
+        input_pts = input_pts.transpose(2, 1)
+        gt_theta, scale = gt_theta.view(-1, 1), scale.view(-1, 1)
+        input_pts, gt_normal, gt_xyz, gt_theta, center, scale = \
+            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_theta.to(device).float(), center.to(device).float(), scale.to(device).float()
+        pred_normal, pred_xyz, pred_theta = net(input_pts)
+        pred_xyz = pred_xyz * scale + center
 
-        # activating network
-        pred = regressor(minknet_input)
+        pred = torch.cat([pred_theta, pred_normal, pred_xyz], dim=1)
+        gt = torch.cat([gt_theta, gt_normal, gt_xyz], dim=1)
 
-        # calculating losses
-        a_loss, v_loss, t_loss = cone_loss(pred, gt, data["trans"])
+        a_loss, v_loss, t_loss = cone_loss(pred, gt, None)
         a_loss = a_loss.mean(0)
         v_loss = v_loss.mean(0)
         t_loss = t_loss.mean(0)
@@ -147,7 +141,6 @@ for epoch in range(opt.nepoch):
         m_theta_loss += t_loss.item()
         m_loss += loss.item()
 
-    # stepping the scheduler
     scheduler.step()
 
     m_loss /= len(train_loader)
@@ -163,29 +156,26 @@ for epoch in range(opt.nepoch):
 
     # Validation after one epoch
     with torch.no_grad():
-        # for loss and accuracy tracking the validation set
         m_loss = 0
         m_axis_loss = 0
         m_vertex_loss = 0
         m_theta_loss = 0
 
-        regressor = regressor.eval()
+        net = net.eval()
 
         for i, data in enumerate(valid_loader, 0):
-            # reading the data and formating them
-            labels = data["labels"].to(device)
-            gt = labels[:,1:]
-            minknet_input = create_input_batch(
-                data, 
-                device=device,
-                quantization_size=0.05
-            )
+            gt_normal, gt_xyz, gt_theta, input_pts, center, scale = data
+            input_pts = input_pts.transpose(2, 1)
+            gt_theta, scale = gt_theta.view(-1, 1), scale.view(-1, 1)
+            input_pts, gt_normal, gt_xyz, gt_theta, center, scale = \
+                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_theta.to(device).float(), center.to(device).float(), scale.to(device).float()
+            pred_normal, pred_xyz, pred_theta = net(input_pts)
+            pred_xyz = pred_xyz * scale + center
 
-            # activating network
-            pred = regressor(minknet_input)
+            pred = torch.cat([pred_theta, pred_normal, pred_xyz], dim=1)
+            gt = torch.cat([gt_theta, gt_normal, gt_xyz], dim=1)
 
-            # calculating losses
-            a_loss, v_loss, t_loss = cone_loss(pred, gt, data["trans"])
+            a_loss, v_loss, t_loss = cone_loss(pred, gt, None)
             a_loss = a_loss.mean(0)
             v_loss = v_loss.mean(0)
             t_loss = t_loss.mean(0)
@@ -209,7 +199,7 @@ for epoch in range(opt.nepoch):
         lossValidThetaValues.append(m_theta_loss)
 
         if epoch == opt.nepoch - 1:
-            torch.save(regressor.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
+            torch.save(net.state_dict(), '%s/con_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'cone train loss', os.path.join(opt.outf, 'con_train_loss.png'))
 vis_curve(lossTrainAxisValues, 'cone train axis loss', os.path.join(opt.outf, 'con_train_axis_loss.png'))

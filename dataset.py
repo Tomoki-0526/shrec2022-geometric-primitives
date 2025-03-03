@@ -5,93 +5,8 @@ import os
 import glob
 from numpy import linalg as LA
 import math
-import einops
+import random
 import re
-
-#####################################################################
-# M4 methods
-def norm(x):
-    return (x * x).sum(-1).sqrt()
-
-def parse_point_cloud(fname):
-
-    file = open(fname)
-    points = []
-
-    for line in file.readlines():
-        pts = torch.Tensor(list(map(float, line.split(","))))
-        points.append(pts)
-
-    return einops.rearrange(points, "n d -> n d")
-
-def parse_plane(lines):
-    
-    normal = torch.Tensor(list(map(float, lines[1:4])))
-    assert norm(normal) > 0.9999
-
-    vertex = torch.Tensor(list(map(float, lines[4:])))
-    data = torch.Tensor([0] + list(map(float, lines[1:])) + [-1, -1])
-
-    return {"type": "plane", "class": 0, "vertex": vertex, "normal":normal, "data": data}
-
-def parse_cylinder(lines):
-    
-    radius = float(lines[1])
-    axis = torch.Tensor(list(map(float, lines[2:5])))
-    assert norm(axis) > 0.9999
-    vertex = torch.Tensor(list(map(float, lines[5:])))
-    data = torch.Tensor([1] + list(map(float, lines[1:])) + [-1])
-
-    return {"type": "cylinder", "class": 1, "radius": radius, "axis": axis, "vertex": vertex, "data": data}
-
-def parse_sphere(lines):
-    
-    radius = float(lines[1])
-    center = torch.Tensor(list(map(float, lines[2:])))
-    data = torch.Tensor([2] + list(map(float, lines[1:])) + [-1]*4)
-
-    return {"type": "sphere", "class": 2, "radius": radius, "center": center, "data": data}
-
-def parse_cone(lines):
-    
-    angle = float(lines[1])
-    axis = torch.Tensor(list(map(float, lines[2:5])))
-    assert norm(axis) > 0.9999
-    vertex = torch.Tensor(list(map(float, lines[5:])))
-    data = torch.Tensor([3] + list(map(float, lines[1:])) + [-1])
-
-    return {"type": "cone", "class": 3, "angle": angle, "axis": axis, "vertex": vertex, "data": data}
-
-def parse_torus(lines):
-    
-    major_radius = float(lines[1])
-    minor_radius = float(lines[2])
-    axis = torch.Tensor(list(map(float, lines[3:6])))
-    assert norm(axis) > 0.9999
-    center = torch.Tensor(list(map(float, lines[6:])))
-    data = torch.Tensor([4] + list(map(float, lines[1:])))
-
-    return {"type": "torus", "class": 4, "major_radius": major_radius, "minor_radius": minor_radius, "axis": axis, "center": center, "data": data}
-
-def parse_label(fname):
-    
-    file = open(fname)
-    
-    #assigning a distinct function to handle each type of primitive
-    handlers ={
-                "1": parse_plane,
-                "2": parse_cylinder,
-                "3": parse_sphere,
-                "4": parse_cone,
-                "5": parse_torus
-                }
-    
-    #parsing the contents of the file. The first character corresponds to a specific type of primitive
-    contents =  file.readlines()
-    
-    #handling the primitive and returning the label
-    return handlers[contents[0][0]](contents)
-#####################################################################
 
 def get_rotation_x(teta):
     return np.array([
@@ -172,7 +87,7 @@ def normalize2(points, unit_ball = False):
 
 # Dataset class for the classification problem    
 class DatasetSHREC2022(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
+    def __init__(self, root, npoints=2048, split='train'):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -185,11 +100,6 @@ class DatasetSHREC2022(data.Dataset):
         self.filepaths = sorted(input_files, key=extract_number)
 
         self.filesplit = []
-        self.transform = transform
-        
-        if self.split == 'test':
-            self.filesplit = self.filepaths
-            return
 
         self.objectClass = dict()
         
@@ -225,27 +135,17 @@ class DatasetSHREC2022(data.Dataset):
             pcd = resample_pcd(pcd, self.npoints)
         
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
-
-        if self.split == 'test':
-            pcd = torch.from_numpy(pcd).float()
-        
-            data = {'x': pcd, 'y': None, 'index': idx+1}
-            for t in self.transform:
-                data = t(data)
-
-            return -1, norm_points, data
         
         return self.classes[idx], norm_points
 
 # Dataset class for the plane regression
 class DatasetPlane(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
+    def __init__(self, root, npoints=2048, split='train'):
         self.root = root
         self.npoints = npoints
         self.split = split
         self.filepaths = sorted(glob.glob(self.root+'/pointCloud/*.txt'))
         self.filesplit = []
-        self.transform = transform
         
 
         self.objectClass = dict()
@@ -276,27 +176,32 @@ class DatasetPlane(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
-        pcd = torch.from_numpy(pcd).float()
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
-        label = parse_label(gtfile)
-
-        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            n1 = f.readline()
+            n2 = f.readline()
+            n3 = f.readline()
+            p1 = f.readline()
+            p2 = f.readline()
+            p3 = f.readline()
         
-        for t in self.transform:
-            data = t(data)
+        normal = np.array([float(n1), float(n2), float(n3)])
+        xyz = np.array([float(p1), float(p2), float(p3)])
 
-        return data
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        
+        return normal, xyz, norm_points, center, scale
 
 # Dataset class for the cylinder regression
 class DatasetCylinder(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
+    def __init__(self, root, npoints=2048, split='train'):
         self.root = root
         self.npoints = npoints
         self.split = split
         self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
         self.filesplit = []
-        self.transform = transform
         
         print(len(self.filepaths))
         self.objectClass = dict()
@@ -329,22 +234,32 @@ class DatasetCylinder(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
-        pcd = torch.from_numpy(pcd).float()
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
-        label = parse_label(gtfile)
 
-        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            radius = f.readline()
+            n1 = f.readline()
+            n2 = f.readline()
+            n3 = f.readline()
+            c1 = f.readline()
+            c2 = f.readline()
+            c3 = f.readline()
+            
         
-        for t in self.transform:
-            data = t(data)
+        target_normal = np.array([float(n1), float(n2), float(n3)])
+        target_point = np.array([float(c1), float(c2), float(c3)])
+        radius = np.float(radius)
 
-        return data
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        
+        return target_normal, target_point, radius, norm_points, center, scale
     
 # Dataset class for the sphere regression
 class DatasetSphere(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
+    def __init__(self, root, npoints=2048, split='train', transform=True):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -383,22 +298,43 @@ class DatasetSphere(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
-        pcd = torch.from_numpy(pcd).float()
+        
+        #Apply a perturbation in rotation
+        if self.transform:
+            rot_x = get_rotation_x(np.deg2rad(random.uniform(25, 45)))
+            rot_y = get_rotation_y(np.deg2rad(random.uniform(25, 45)))
+            rot_z = get_rotation_z(np.deg2rad(random.uniform(25, 45)))
+            rotation_mat = np.dot(rot_x, rot_y)
+            rotation_mat = np.dot(rotation_mat, rot_z)
+        
+            pcd = add_rotation_to_pcloud(pcd, rotation_mat)
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
-        label = parse_label(gtfile)
 
-        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            radius = f.readline()
+            c1 = f.readline()
+            c2 = f.readline()
+            c3 = f.readline()
         
-        for t in self.transform:
-            data = t(data)
+        point = np.array([float(c1), float(c2), float(c3)])
+        radius = np.float(radius)
 
-        return data
+        if self.transform:
+            rotation_norm = np.transpose(np.linalg.inv(rotation_mat))
+        
+            normal = np.dot(rotation_norm, normal)
+            normal = normal/np.linalg.norm(normal)
+
+        norm_points, centerp, scale = normalize2(pcd, unit_ball=True)
+        
+        return point, radius, norm_points, centerp, scale
 
 # Dataset class for the cone regression
 class DatasetCone(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
+    def __init__(self, root, npoints=2048, split='train', transform=True):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -437,22 +373,47 @@ class DatasetCone(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
-        pcd = torch.from_numpy(pcd).float()
+        
+        #Apply a perturbation in rotation
+        if self.transform:
+            rot_x = get_rotation_x(np.deg2rad(random.uniform(25, 45)))
+            rot_y = get_rotation_y(np.deg2rad(random.uniform(25, 45)))
+            rot_z = get_rotation_z(np.deg2rad(random.uniform(25, 45)))
+            rotation_mat = np.dot(rot_x, rot_y)
+            rotation_mat = np.dot(rotation_mat, rot_z)
+        
+            pcd = add_rotation_to_pcloud(pcd, rotation_mat)
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
-        label = parse_label(gtfile)
 
-        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            aperture = f.readline()
+            n1 = f.readline()
+            n2 = f.readline()
+            n3 = f.readline()
+            v1 = f.readline()
+            v2 = f.readline()
+            v3 = f.readline()
         
-        for t in self.transform:
-            data = t(data)
+        normal = np.array([float(n1), float(n2), float(n3)])
+        vertex = np.array([float(v1), float(v2), float(v3)])
+        aperture = np.float(aperture)
 
-        return data
+        if self.transform:
+            rotation_norm = np.transpose(np.linalg.inv(rotation_mat))
+        
+            normal = np.dot(rotation_norm, normal)
+            normal = normal/np.linalg.norm(normal)
+
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        
+        return normal, vertex, aperture, norm_points, center, scale
 
 # Dataset class for the torus regression
 class DatasetTorus(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=[]):
+    def __init__(self, root, npoints=2048, split='train', transform=True):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -491,15 +452,42 @@ class DatasetTorus(data.Dataset):
         
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
-        pcd = torch.from_numpy(pcd).float()
+        
+        #Apply a perturbation in rotation
+        if self.transform:
+            rot_x = get_rotation_x(np.deg2rad(random.uniform(25, 45)))
+            rot_y = get_rotation_y(np.deg2rad(random.uniform(25, 45)))
+            rot_z = get_rotation_z(np.deg2rad(random.uniform(25, 45)))
+            rotation_mat = np.dot(rot_x, rot_y)
+            rotation_mat = np.dot(rotation_mat, rot_z)
+        
+            pcd = add_rotation_to_pcloud(pcd, rotation_mat)
         
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
-        label = parse_label(gtfile)
 
-        data = {'x': pcd, 'y': label['data'], 'index': idx+1}
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            major_radius = f.readline()
+            minor_radius = f.readline()
+            n1 = f.readline()
+            n2 = f.readline()
+            n3 = f.readline()
+            c1 = f.readline()
+            c2 = f.readline()
+            c3 = f.readline()
         
-        for t in self.transform:
-            data = t(data)
+        normal = np.array([float(n1), float(n2), float(n3)])
+        point = np.array([float(c1), float(c2), float(c3)])
+        major_radius = np.float(major_radius)
+        minor_radius = np.float(minor_radius)
 
-        return data
+        if self.transform:
+            rotation_norm = np.transpose(np.linalg.inv(rotation_mat))
+        
+            normal = np.dot(rotation_norm, normal)
+            normal = normal/np.linalg.norm(normal)
+
+        norm_points, centerp, scale = normalize2(pcd, unit_ball=True)
+        
+        return normal, point, minor_radius, major_radius, norm_points, centerp, scale

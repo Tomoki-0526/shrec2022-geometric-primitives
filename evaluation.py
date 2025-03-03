@@ -3,7 +3,7 @@ import torch
 import os
 from numpy import linalg as LA
 import argparse
-from model.models import Classifier, PlaneRegressor, CylinderRegressor, SphereRegressor, ConeRegressor, TorusRegressor
+from model.models import Classifier, PlaneNet, CylinderNet, SphereNet, ConeNet, TorusNet
 from time import time
 
 def resample_pcd(pcd, n):
@@ -70,7 +70,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
 
     if pred_choice==0: #Plane
         #print('Shape is a plane')
-        network = torch.nn.DataParallel(PlaneRegressor())
+        network = torch.nn.DataParallel(PlaneNet())
         network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/plane/pla_model_249.pth"))
         network.cuda()
 
@@ -95,7 +95,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}')
     elif pred_choice==1: #Cylinder
         #print('Shape is a cylinder')
-        network = torch.nn.DataParallel(CylinderRegressor())
+        network = torch.nn.DataParallel(CylinderNet())
         network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/cylinder/cyl_model_249.pth"))
         network.cuda()
 
@@ -123,7 +123,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
     elif pred_choice==2: #Sphere
         #print('Shape is a sphere')
-        network = torch.nn.DataParallel(SphereRegressor())
+        network = torch.nn.DataParallel(SphereNet())
         network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/sphere/sph_model_249.pth"))
         network.cuda()
 
@@ -144,7 +144,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_point}->{pred_radius}')
     elif pred_choice==3: #Cone
         #print('Shape is a cone')
-        network = torch.nn.DataParallel(ConeRegressor())
+        network = torch.nn.DataParallel(ConeNet())
         network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/cone/con_model_249.pth"))
         network.cuda()
 
@@ -170,7 +170,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
-        network = torch.nn.DataParallel(TorusRegressor())
+        network = torch.nn.DataParallel(TorusNet())
         network.load_state_dict(torch.load("/home/szj/SHREC2022/log/dgcnn/torus/tor_model_249.pth"))
         network.cuda()
 

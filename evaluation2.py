@@ -275,23 +275,23 @@ cls_net = torch.nn.DataParallel(Classifier(num_classes=5)).to(device)
 cls_net.load_state_dict(torch.load(cls_checkpoint))
 cls_net.eval()
 
-pla_net = PlaneRegressor().to(device)
+pla_net = PlaneNet().to(device)
 pla_net.load_state_dict(torch.load(plane_checkpoint))
 pla_net.eval()
 
-cyl_net = CylinderRegressor().to(device)
+cyl_net = CylinderNet().to(device)
 cyl_net.load_state_dict(torch.load(cylinder_checkpoint))
 cyl_net.eval()
 
-sph_net = SphereRegressor().to(device)
+sph_net = SphereNet().to(device)
 sph_net.load_state_dict(torch.load(sphere_checkpoint))
 sph_net.eval()
 
-con_net = ConeRegressor().to(device)
+con_net = ConeNet().to(device)
 con_net.load_state_dict(torch.load(cone_checkpoint))
 con_net.eval()
 
-tor_net = TorusRegressor().to(device)
+tor_net = TorusNet().to(device)
 tor_net.load_state_dict(torch.load(torus_checkpoint))
 tor_net.eval()
 

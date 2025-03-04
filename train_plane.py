@@ -119,7 +119,7 @@ for epoch in range(opt.nepoch):
 
         a_loss, v_loss = plane_loss(pred, gt, None)
 
-        loss = a_loss.mean(0) #+ vertex_loss.mean()
+        loss = a_loss.mean(0) + v_loss.mean(0)
         loss.backward()
         optimizer.step()
 

@@ -87,23 +87,23 @@ def normalize2(points, unit_ball = False):
 
 # Dataset class for the classification problem    
 class DatasetSHREC2022(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train'):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
-        # self.filepaths = sorted(glob.glob(self.root+'/pointCloud/*.txt'))
-        input_files = glob.glob(self.root+'/pointCloud/pointCloud*.txt')
+        self.filepaths = sorted(glob.glob(self.root+'/pointCloud/*.txt'))
+        # input_files = glob.glob(self.root+'/pointCloud/pointCloud*.txt')
         
-        def extract_number(f):
-            s = re.search(r'(\d+)', os.path.basename(f))
-            return int(s[0]) if s else 0
-        self.filepaths = sorted(input_files, key=extract_number)
+        # def extract_number(f):
+        #     s = re.search(r'(\d+)', os.path.basename(f))
+        #     return int(s[0]) if s else 0
+        # self.filepaths = sorted(input_files, key=extract_number)
 
         self.filesplit = []
 
         self.objectClass = dict()
         
-        for i in range(5):
+        for i in range(num_classes):
             self.objectClass[i] = []
             
         for filename in self.filepaths:
@@ -115,11 +115,11 @@ class DatasetSHREC2022(data.Dataset):
         self.classes = []
 
         if self.split == 'train':
-            for i in range(5):
+            for i in range(num_classes):
                 self.filesplit.extend(self.objectClass[i][:7360])
                 self.classes.extend([i for j in range(7360)])
         elif self.split == 'val':
-            for i in range(5):
+            for i in range(num_classes):
                 self.filesplit.extend(self.objectClass[i][7360:])
                 self.classes.extend([i for j in range(1840)])
 
@@ -140,7 +140,7 @@ class DatasetSHREC2022(data.Dataset):
 
 # Dataset class for the plane regression
 class DatasetPlane(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train'):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -150,7 +150,7 @@ class DatasetPlane(data.Dataset):
 
         self.objectClass = dict()
         
-        for i in range(5):
+        for i in range(num_classes):
             self.objectClass[i] = []
             
         for filename in self.filepaths:
@@ -196,7 +196,7 @@ class DatasetPlane(data.Dataset):
 
 # Dataset class for the cylinder regression
 class DatasetCylinder(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train'):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -206,7 +206,7 @@ class DatasetCylinder(data.Dataset):
         print(len(self.filepaths))
         self.objectClass = dict()
         
-        for i in range(5):
+        for i in range(num_classes):
             self.objectClass[i] = []
             
         for filename in self.filepaths:
@@ -259,7 +259,7 @@ class DatasetCylinder(data.Dataset):
     
 # Dataset class for the sphere regression
 class DatasetSphere(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=True):
+    def __init__(self, root, npoints=2048, split='train', transform=True, num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -270,7 +270,7 @@ class DatasetSphere(data.Dataset):
         print(len(self.filepaths))
         self.objectClass = dict()
         
-        for i in range(5):
+        for i in range(num_classes):
             self.objectClass[i] = []
             
         for filename in self.filepaths:
@@ -334,7 +334,7 @@ class DatasetSphere(data.Dataset):
 
 # Dataset class for the cone regression
 class DatasetCone(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=True):
+    def __init__(self, root, npoints=2048, split='train', transform=True, num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -345,7 +345,7 @@ class DatasetCone(data.Dataset):
         print(len(self.filepaths))
         self.objectClass = dict()
         
-        for i in range(5):
+        for i in range(num_classes):
             self.objectClass[i] = []
             
         for filename in self.filepaths:
@@ -413,7 +413,7 @@ class DatasetCone(data.Dataset):
 
 # Dataset class for the torus regression
 class DatasetTorus(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=True):
+    def __init__(self, root, npoints=2048, split='train', transform=True, num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
@@ -424,7 +424,7 @@ class DatasetTorus(data.Dataset):
         print(len(self.filepaths))
         self.objectClass = dict()
         
-        for i in range(5):
+        for i in range(num_classes):
             self.objectClass[i] = []
             
         for filename in self.filepaths:
@@ -491,3 +491,212 @@ class DatasetTorus(data.Dataset):
         norm_points, centerp, scale = normalize2(pcd, unit_ball=True)
         
         return normal, point, minor_radius, major_radius, norm_points, centerp, scale
+
+# Dataset class for the cuboid regression
+class DatasetCuboid(data.Dataset):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
+        self.root = root
+        self.npoints = npoints
+        self.split = split
+        self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
+        self.filesplit = []
+
+        self.objectClass = dict()
+
+        for i in range(num_classes):
+            self.objectClass[i] = []
+
+        for filename in self.filepaths:
+            gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+            gtfile = os.path.normpath(gtfile)
+            
+            with open(gtfile, 'r') as f:
+                cl = f.readline()
+            self.objectClass[int(cl)-1].append(filename)
+
+        self.classes = []
+
+        if self.split == 'train':
+            self.filesplit.extend(self.objectClass[5][:7360])
+        elif self.split == 'val':
+            self.filesplit.extend(self.objectClass[5][7360:])
+
+    def __len__(self):
+        return len(self.filesplit)
+    
+    def __getitem__(self, idx):
+        filename = self.filesplit[idx]
+
+        pcd = np.loadtxt(filename, delimiter=',')
+        
+        if self.npoints != 0:
+            pcd = resample_pcd(pcd, self.npoints)
+        
+        gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+        gtfile = os.path.normpath(gtfile)
+
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            a = f.readline()
+            b = f.readline()
+            n1 = f.readline()
+            n2 = f.readline()
+            n3 = f.readline()
+            u1 = f.readline()
+            u2 = f.readline()
+            u3 = f.readline()
+            c1 = f.readline()
+            c2 = f.readline()
+            c3 = f.readline()
+
+        target_axis = np.array([float(n1), float(n2), float(n3)])
+        target_uaxis = np.array([float(u1), float(u2), float(u3)])
+        point = np.array([float(c1), float(c2), float(c3)])
+        a = np.float(a)
+        b = np.float(b)
+
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+
+        return target_axis, target_uaxis, point, a, b, norm_points, center, scale
+    
+# Dataset class for the tee regression
+class DatasetTee(data.Dataset):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
+        self.root = root
+        self.npoints = npoints
+        self.split = split
+        self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
+        self.filesplit = []
+
+        self.objectClass = dict()
+
+        for i in range(num_classes):
+            self.objectClass[i] = []
+
+        for filename in self.filepaths:
+            gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+            gtfile = os.path.normpath(gtfile)
+            
+            with open(gtfile, 'r') as f:
+                cl = f.readline()
+            self.objectClass[int(cl)-1].append(filename)
+
+        self.classes = []
+
+        if self.split == 'train':
+            self.filesplit.extend(self.objectClass[6][:7360])
+        elif self.split == 'val':
+            self.filesplit.extend(self.objectClass[6][7360:])
+
+    def __len__(self):
+        return len(self.filesplit)
+    
+    def __getitem__(self, idx):
+        filename = self.filesplit[idx]
+
+        pcd = np.loadtxt(filename, delimiter=',')
+        
+        if self.npoints != 0:
+            pcd = resample_pcd(pcd, self.npoints)
+        
+        gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+        gtfile = os.path.normpath(gtfile)
+
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            ar = f.readline()
+            br = f.readline()
+            al = f.readline()
+            bl = f.readline()
+            c1 = f.readline()
+            c2 = f.readline()
+            c3 = f.readline()
+            u1 = f.readline()
+            u2 = f.readline()
+            u3 = f.readline()
+            v1 = f.readline()
+            v2 = f.readline()
+            v3 = f.readline()
+
+        target_uaxis = np.array([float(u1), float(u2), float(u3)])
+        target_vaxis = np.array([float(v1), float(v2), float(v3)])
+        point = np.array([float(c1), float(c2), float(c3)])
+        ar = np.float(ar)
+        br = np.float(br)
+        al = np.float(al)
+        bl = np.float(bl)
+
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+
+        return target_uaxis, target_vaxis, point, ar, br, al, bl, norm_points, center, scale
+    
+# Dataset class for the cross regression
+class DatasetCross(data.Dataset):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
+        self.root = root
+        self.npoints = npoints
+        self.split = split
+        self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
+        self.filesplit = []
+
+        self.objectClass = dict()
+
+        for i in range(num_classes):
+            self.objectClass[i] = []
+
+        for filename in self.filepaths:
+            gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+            gtfile = os.path.normpath(gtfile)
+            
+            with open(gtfile, 'r') as f:
+                cl = f.readline()
+            self.objectClass[int(cl)-1].append(filename)
+
+        self.classes = []
+
+        if self.split == 'train':
+            self.filesplit.extend(self.objectClass[7][:7360])
+        elif self.split == 'val':
+            self.filesplit.extend(self.objectClass[7][7360:])
+
+    def __len__(self):
+        return len(self.filesplit)
+    
+    def __getitem__(self, idx):
+        filename = self.filesplit[idx]
+
+        pcd = np.loadtxt(filename, delimiter=',')
+        
+        if self.npoints != 0:
+            pcd = resample_pcd(pcd, self.npoints)
+        
+        gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
+        gtfile = os.path.normpath(gtfile)
+
+        with open(gtfile, 'r') as f:
+            cl = f.readline()
+            ar = f.readline()
+            br = f.readline()
+            al = f.readline()
+            bl = f.readline()
+            c1 = f.readline()
+            c2 = f.readline()
+            c3 = f.readline()
+            u1 = f.readline()
+            u2 = f.readline()
+            u3 = f.readline()
+            v1 = f.readline()
+            v2 = f.readline()
+            v3 = f.readline()
+
+        target_uaxis = np.array([float(u1), float(u2), float(u3)])
+        target_vaxis = np.array([float(v1), float(v2), float(v3)])
+        point = np.array([float(c1), float(c2), float(c3)])
+        ar = np.float(ar)
+        br = np.float(br)
+        al = np.float(al)
+        bl = np.float(bl)
+
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+
+        return target_uaxis, target_vaxis, point, ar, br, al, bl, norm_points, center, scale

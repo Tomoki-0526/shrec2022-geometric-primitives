@@ -48,7 +48,7 @@ print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
 torch.manual_seed(opt.manualSeed)
 
-num_classes = 5
+num_classes = 8
 
 train_dataset = DatasetSHREC2022(
     root=opt.dataset,

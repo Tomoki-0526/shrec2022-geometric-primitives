@@ -108,8 +108,8 @@ class DatasetSHREC2022(data.Dataset):
             
         for filename in self.filepaths:
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -155,8 +155,8 @@ class DatasetPlane(data.Dataset):
             
         for filename in self.filepaths:
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -213,8 +213,8 @@ class DatasetCylinder(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -277,8 +277,8 @@ class DatasetSphere(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -352,8 +352,8 @@ class DatasetCone(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -431,8 +431,8 @@ class DatasetTorus(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -510,8 +510,8 @@ class DatasetCuboid(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -577,8 +577,8 @@ class DatasetTee(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []
@@ -648,8 +648,8 @@ class DatasetCross(data.Dataset):
             gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
             gtfile = os.path.normpath(gtfile)
             
-            with open(gtfile, 'r') as f:
-                cl = f.readline()
+            gt = np.loadtxt(gtfile)
+            cl = gt[0]
             self.objectClass[int(cl)-1].append(filename)
 
         self.classes = []

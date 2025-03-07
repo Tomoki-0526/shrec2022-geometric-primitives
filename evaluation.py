@@ -3,7 +3,7 @@ import torch
 import os
 from numpy import linalg as LA
 import argparse
-from model.models import Classifier, PlaneNet, CylinderNet, SphereNet, ConeNet, TorusNet
+from model.models import *
 from time import time
 
 def resample_pcd(pcd, n):
@@ -49,18 +49,18 @@ t1 = time()
 pcd = np.loadtxt(opt.file, delimiter=',')
 pcd = resample_pcd(pcd, 2048)
 
-input_pt, center, scale = normalize2(pcd, unit_ball=True)
+input_pts, center, scale = normalize2(pcd, unit_ball=True)
 #print(f'Center:{center}, Scale: {scale}')
-input_pt = torch.unsqueeze(torch.from_numpy(input_pt), 0)
+input_pts = torch.unsqueeze(torch.from_numpy(input_pts), 0)
 
-classifier = torch.nn.DataParallel(Classifier(num_classes=5))
-classifier.load_state_dict(torch.load('/home/szj/SHREC2022/log/dgcnn/classification/cls_model_249.pth'))
+classifier = torch.nn.DataParallel(Classifier(num_classes=8))
+classifier.load_state_dict(torch.load('/home/szj/SHREC2022/log/ultra/classification/cls_model_249.pth'))
 classifier.cuda()
 
-input_pt = input_pt.transpose(2, 1)
-input_pt = input_pt.cuda().float()
+input_pts = input_pts.transpose(2, 1)
+input_pts = input_pts.cuda().float()
 classifier = classifier.eval()
-pred = classifier(input_pt)
+pred = classifier(input_pts)
 pred_choice = pred.detach().max(1)[1].cpu().numpy()[0]
 
 classifier.cpu()
@@ -75,7 +75,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point = network(input_pt)
+        pred_normal, pred_point = network(input_pts)
     
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -100,7 +100,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point, pred_radius = network(input_pt)
+        pred_normal, pred_point, pred_radius = network(input_pts)
 
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -128,7 +128,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         network.cuda()
 
         network = network.eval()
-        pred_point, pred_radius = network(input_pt)
+        pred_point, pred_radius = network(input_pts)
 
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
         pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
@@ -149,7 +149,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point, pred_aperture = network(input_pt)
+        pred_normal, pred_point, pred_aperture = network(input_pts)
 
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -175,7 +175,7 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point, pred_min, pred_max = network(input_pt)
+        pred_normal, pred_point, pred_min, pred_max = network(input_pts)
 
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -198,6 +198,116 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         f.write(str(pred_point[2])+'\n')
 
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_min}->{pred_max}')
+
+    elif pred_choice == 5:  # cuboid
+        network = CuboidNet()
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/cuboid/cub_model_249.pth"))
+        network.cuda()
+
+        network = network.eval()
+        pred_axis, pred_uaxis, pred_point, pred_length, pred_width = network(input_pts)
+
+        pred_axis = torch.squeeze(pred_axis).cpu().detach().numpy()
+        pred_uaxis = torch.squeeze(pred_uaxis).cpu().detach().numpy()
+        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+        pred_length = torch.squeeze(pred_length).cpu().detach().numpy()
+        pred_width = torch.squeeze(pred_width).cpu().detach().numpy()
+
+        pred_point = pred_point * scale + center
+        pred_axis = pred_axis / LA.norm(pred_axis)
+        pred_uaxis = pred_uaxis / LA.norm(pred_uaxis)
+        pred_length = pred_length * scale
+        pred_width = pred_width * scale
+
+        f.write(str(pred_length)+'\n')
+        f.write(str(pred_width)+'\n')
+        f.write(str(pred_axis[0])+'\n')
+        f.write(str(pred_axis[1])+'\n')
+        f.write(str(pred_axis[2])+'\n')
+        f.write(str(pred_uaxis[0])+'\n')
+        f.write(str(pred_uaxis[1])+'\n')
+        f.write(str(pred_uaxis[2])+'\n')
+        f.write(str(pred_point[0])+'\n')
+        f.write(str(pred_point[1])+'\n')
+        f.write(str(pred_point[2])+'\n')
+
+    elif pred_choice == 6:  # tee
+        network = TeeNet()
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/tee/tee_model_249.pth"))
+        network.cuda()
+
+        network = network.eval()
+
+        pred_uaxis, pred_vaxis, pred_point, pred_main_radius, pred_vice_radius, pred_main_length, pred_vice_length = network(input_pts)
+
+        pred_uaxis = torch.squeeze(pred_uaxis).cpu().detach().numpy()
+        pred_vaxis = torch.squeeze(pred_vaxis).cpu().detach().numpy()
+        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+        pred_main_radius = torch.squeeze(pred_main_radius).cpu().detach().numpy()
+        pred_vice_radius = torch.squeeze(pred_vice_radius).cpu().detach().numpy()
+        pred_main_length = torch.squeeze(pred_main_length).cpu().detach().numpy()
+        pred_vice_length = torch.squeeze(pred_vice_length).cpu().detach().numpy()
+
+        pred_point = pred_point * scale + center
+        pred_uaxis = pred_uaxis / LA.norm(pred_uaxis)
+        pred_vaxis = pred_vaxis / LA.norm(pred_vaxis)
+        pred_main_radius = pred_main_radius * scale
+        pred_vice_radius = pred_vice_radius * scale
+        pred_main_length = pred_main_length * scale
+        pred_vice_length = pred_vice_length * scale
+
+        f.write(str(pred_main_radius)+'\n')
+        f.write(str(pred_vice_radius)+'\n')
+        f.write(str(pred_main_length)+'\n')
+        f.write(str(pred_vice_length)+'\n')
+        f.write(str(pred_point[0])+'\n')
+        f.write(str(pred_point[1])+'\n')
+        f.write(str(pred_point[2])+'\n')
+        f.write(str(pred_uaxis[0])+'\n')
+        f.write(str(pred_uaxis[1])+'\n')
+        f.write(str(pred_uaxis[2])+'\n')
+        f.write(str(pred_vaxis[0])+'\n')
+        f.write(str(pred_vaxis[1])+'\n')
+        f.write(str(pred_vaxis[2])+'\n')
+
+    elif pred_choice == 7:  # cross
+        network = CrossNet()
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/cross/xos_model_249.pth"))
+        network.cuda()
+
+        network = network.eval()
+
+        pred_uaxis, pred_vaxis, pred_point, pred_main_radius, pred_vice_radius, pred_main_length, pred_vice_length = network(input_pts)
+
+        pred_uaxis = torch.squeeze(pred_uaxis).cpu().detach().numpy()
+        pred_vaxis = torch.squeeze(pred_vaxis).cpu().detach().numpy()
+        pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
+        pred_main_radius = torch.squeeze(pred_main_radius).cpu().detach().numpy()
+        pred_vice_radius = torch.squeeze(pred_vice_radius).cpu().detach().numpy()
+        pred_main_length = torch.squeeze(pred_main_length).cpu().detach().numpy()
+        pred_vice_length = torch.squeeze(pred_vice_length).cpu().detach().numpy()
+
+        pred_point = pred_point * scale + center
+        pred_uaxis = pred_uaxis / LA.norm(pred_uaxis)
+        pred_vaxis = pred_vaxis / LA.norm(pred_vaxis)
+        pred_main_radius = pred_main_radius * scale
+        pred_vice_radius = pred_vice_radius * scale
+        pred_main_length = pred_main_length * scale
+        pred_vice_length = pred_vice_length * scale
+
+        f.write(str(pred_main_radius)+'\n')
+        f.write(str(pred_vice_radius)+'\n')
+        f.write(str(pred_main_length)+'\n')
+        f.write(str(pred_vice_length)+'\n')
+        f.write(str(pred_point[0])+'\n')
+        f.write(str(pred_point[1])+'\n')
+        f.write(str(pred_point[2])+'\n')
+        f.write(str(pred_uaxis[0])+'\n')
+        f.write(str(pred_uaxis[1])+'\n')
+        f.write(str(pred_uaxis[2])+'\n')
+        f.write(str(pred_vaxis[0])+'\n')
+        f.write(str(pred_vaxis[1])+'\n')
+        f.write(str(pred_vaxis[2])+'\n')
 
 t2 = time()
 print(f'{output_filename} {(t2-t1)}')

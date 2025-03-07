@@ -408,10 +408,10 @@ class TorusLoss(Losses):
 class CuboidLoss(Losses):
     def __call__(self, pred, gt):
         pred_n, pred_u, pred_c, pred_a, pred_b = \
-            pred[:, 0:3], pred[:, 3:6], pred[:, 6:9], pred[:, 10], pred[:, 11]
+            pred[:, 0:3], pred[:, 3:6], pred[:, 6:9], pred[:, 9], pred[:, 10]
         
         gt_n, gt_u, gt_c, gt_a, gt_b = \
-            gt[:, 0:3], gt[:, 3:6], gt[:, 6:9], gt[:, 10], gt[:, 11]
+            gt[:, 0:3], gt[:, 3:6], gt[:, 6:9], gt[:, 9], gt[:, 10]
         
         n_loss = self.AxisToAxisLoss(pred_n, gt_n)
         u_loss = self.AxisToAxisLoss(pred_u, gt_u)
@@ -425,10 +425,10 @@ class CuboidLoss(Losses):
 class TeeLoss(Losses):
     def __call__(self, pred, gt):
         pred_u, pred_v, pred_c, pred_ar, pred_br, pred_al, pred_bl = \
-            pred[:, 0:3], pred[:, 3:6], pred[:, 6:9], pred[:, 10], pred[:, 11], pred[:, 12], pred[:, 13]
+            pred[:, 0:3], pred[:, 3:6], pred[:, 6:9], pred[:, 9], pred[:, 10], pred[:, 11], pred[:, 12]
 
         gt_u, gt_v, gt_c, gt_ar, gt_br, gt_al, gt_bl = \
-            gt[:, 0:3], gt[:, 3:6], gt[:, 6:9], gt[:, 10], gt[:, 11], gt[:, 12], gt[:, 13]
+            gt[:, 0:3], gt[:, 3:6], gt[:, 6:9], gt[:, 9], gt[:, 10], gt[:, 11], gt[:, 12]
         
         u_loss = self.AxisToAxisLoss(pred_u, gt_u)
         v_loss = self.AxisToAxisLoss(pred_v, gt_v)
@@ -444,10 +444,10 @@ class TeeLoss(Losses):
 class CrossLoss(Losses):
     def __call__(self, pred, gt):
         pred_u, pred_v, pred_c, pred_ar, pred_br, pred_al, pred_bl = \
-            pred[:, 0:3], pred[:, 3:6], pred[:, 6:9], pred[:, 10], pred[:, 11], pred[:, 12], pred[:, 13]
+            pred[:, 0:3], pred[:, 3:6], pred[:, 6:9], pred[:, 9], pred[:, 10], pred[:, 11], pred[:, 12]
 
         gt_u, gt_v, gt_c, gt_ar, gt_br, gt_al, gt_bl = \
-            gt[:, 0:3], gt[:, 3:6], gt[:, 6:9], gt[:, 10], gt[:, 11], gt[:, 12], gt[:, 13]
+            gt[:, 0:3], gt[:, 3:6], gt[:, 6:9], gt[:, 9], gt[:, 10], gt[:, 11], gt[:, 12]
         
         u_loss = self.AxisToAxisLoss(pred_u, gt_u)
         v_loss = self.AxisToAxisLoss(pred_v, gt_v)

@@ -83,6 +83,9 @@ python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/
 python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/sphere
 python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/cone
 python train_torus.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/torus
+python train_cuboid.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/cuboid
+python train_tee.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/tee
+python train_cross.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/cross
 ```
 
 ### Results

@@ -12,7 +12,7 @@ from model.models import PlaneNet
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from loss import PlaneLoss
+from losses import PlaneLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()

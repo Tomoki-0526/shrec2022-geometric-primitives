@@ -12,7 +12,7 @@ from model.models import TorusNet
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from loss import TorusLoss
+from losses import TorusLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()

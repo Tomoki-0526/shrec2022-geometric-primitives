@@ -12,7 +12,7 @@ from model.models import SphereNet
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from loss import SphereLoss
+from losses import SphereLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()

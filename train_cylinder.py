@@ -12,7 +12,7 @@ from model.models import CylinderNet
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from loss import CylinderLoss
+from losses import CylinderLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()

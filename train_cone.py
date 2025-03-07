@@ -12,7 +12,7 @@ from model.models import ConeNet
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from loss import ConeLoss
+from losses import ConeLoss
 
 def vis_curve(curve, title, filename):
     plt.clf()

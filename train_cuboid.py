@@ -216,7 +216,7 @@ for epoch in range(opt.nepoch):
         m_point_loss    /= len(valid_loader)
         m_length_loss   /= len(valid_loader)
         m_width_loss    /= len(valid_loader)
-        print(f" -------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, UAxis loss: {m_uaxis_loss}, Vertex loss: {m_point_loss}, Length loss: {m_length_loss}, Width loss: {m_width_loss}")
+        print(f" --------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, UAxis loss: {m_uaxis_loss}, Vertex loss: {m_point_loss}, Length loss: {m_length_loss}, Width loss: {m_width_loss}")
 
     lossValidValues.append(m_loss)
     lossValidAxisValues.append(m_axis_loss)
@@ -226,7 +226,7 @@ for epoch in range(opt.nepoch):
     lossValidWidthValues.append(m_width_loss)
 
     if epoch == opt.nepoch - 1:
-        torch.save(net.state_dict(), '%s/cyl_model_%d.pth' % (opt.outf, epoch))
+        torch.save(net.state_dict(), '%s/cub_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrainValues, 'cuboid train loss', os.path.join(opt.outf, 'cub_train_loss.png'))
 vis_curve(lossTrainAxisValues, 'cuboid train axis loss', os.path.join(opt.outf, 'cub_train_axis_loss.png'))

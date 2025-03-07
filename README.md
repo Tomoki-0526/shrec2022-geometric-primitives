@@ -95,3 +95,4 @@ M1: PointNet
 M2: 3D ShapeNets
 M3: DGCNN
 M4: DGCNN + PointNet(loss_fn)
+M5: Ultra

@@ -133,7 +133,7 @@ for epoch in range(opt.nepoch):
         pred_b = pred_b.view(-1, 1) * scale
 
         pred = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
-        gt = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
+        gt = torch.cat([gt_axis, gt_uaxis, gt_point, gt_a, gt_b], dim=1)
 
         n_loss, u_loss, c_loss, a_loss, b_loss = cuboid_loss(pred, gt)
         n_loss = n_loss.mean(0)
@@ -157,8 +157,10 @@ for epoch in range(opt.nepoch):
 
     m_loss          /= len(train_loader)
     m_axis_loss     /= len(train_loader)
+    m_uaxis_loss    /= len(train_loader)
     m_point_loss    /= len(train_loader)
     m_length_loss   /= len(train_loader)
+    m_width_loss    /= len(train_loader)
     print(f" Epoch: {epoch} | Training: Total loss = {m_loss}, Axis loss: {m_axis_loss}, UAxis loss: {m_uaxis_loss}, Vertex loss: {m_point_loss}, Length loss: {m_length_loss}, Width loss: {m_width_loss}")
 
     lossTrainValues.append(m_loss)
@@ -190,7 +192,7 @@ for epoch in range(opt.nepoch):
             pred_b = pred_b.view(-1, 1) * scale
 
             pred = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
-            gt = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
+            gt = torch.cat([gt_axis, gt_uaxis, gt_point, gt_a, gt_b], dim=1)
 
             n_loss, u_loss, c_loss, a_loss, b_loss = cuboid_loss(pred, gt)
             n_loss = n_loss.mean(0)
@@ -210,8 +212,10 @@ for epoch in range(opt.nepoch):
 
         m_loss          /= len(valid_loader)
         m_axis_loss     /= len(valid_loader)
+        m_uaxis_loss    /= len(valid_loader)
         m_point_loss    /= len(valid_loader)
         m_length_loss   /= len(valid_loader)
+        m_width_loss    /= len(valid_loader)
         print(f" -------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, UAxis loss: {m_uaxis_loss}, Vertex loss: {m_point_loss}, Length loss: {m_length_loss}, Width loss: {m_width_loss}")
 
     lossValidValues.append(m_loss)

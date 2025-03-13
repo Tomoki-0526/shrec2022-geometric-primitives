@@ -1,6 +1,6 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
 import argparse
 import random
 import torch
@@ -13,6 +13,11 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from losses import PlaneLoss
+
+from functools import partial
+from pointcept.engines.defaults import worker_init_fn
+from pointcept.datasets import point_collate_fn
+import pointcept.utils.comm as comm
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -50,12 +55,25 @@ torch.manual_seed(opt.manualSeed)
 train_dataset = DatasetPlane(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train')
+        split='train',
+        num_classes=8)
 
 valid_dataset = DatasetPlane(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points)
+        npoints=opt.num_points,
+        num_classes=8)
+
+init_fn = (
+    partial(
+        worker_init_fn,
+        num_workers=opt.workers,
+        rank=comm.get_rank(),
+        seed=opt.manualSeed,
+    )
+    if opt.manualSeed is not None
+    else None
+)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,
@@ -107,15 +125,9 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         net = net.train()
 
-        gt_normal, gt_xyz, input_pts, center, scale = data
-        input_pts = input_pts.transpose(2, 1)
-        input_pts, gt_normal, gt_xyz, center, scale = \
-            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), center.to(device).float(), scale.to(device).float()
-        pred_normal, pred_xyz = net(input_pts)
-        pred_xyz = pred_xyz * scale.view(-1, 1) + center
-
-        pred = torch.cat([pred_normal, pred_xyz], dim=1)
-        gt = torch.cat([gt_normal, gt_xyz], dim=1)
+        gt = data['params'].to(device).float()
+        data_dict = data.pop('params', -1)
+        pred = net(data_dict)
 
         a_loss, v_loss = plane_loss(pred, gt, None)
 
@@ -149,10 +161,10 @@ for epoch in range(opt.nepoch):
             input_pts = input_pts.transpose(2, 1)
             input_pts, gt_normal, gt_xyz, center, scale = \
                 input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), center.to(device).float(), scale.to(device).float()
-            pred_normal, pred_xyz = net(input_pts)
-            pred_xyz = pred_xyz * scale + center
+            pred_normal, pred_point = net(input_pts)
+            pred_point = pred_point * scale + center
 
-            pred = torch.cat([pred_normal, pred_xyz], dim=1)
+            pred = torch.cat([pred_normal, pred_point], dim=1)
             gt = torch.cat([gt_normal, gt_xyz], dim=1)
 
             # calculating the loss

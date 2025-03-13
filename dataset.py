@@ -188,11 +188,23 @@ class DatasetPlane(data.Dataset):
             p3 = f.readline()
         
         normal = np.array([float(n1), float(n2), float(n3)])
-        xyz = np.array([float(p1), float(p2), float(p3)])
+        point = np.array([float(p1), float(p2), float(p3)])
 
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+
+        save_dict = dict(
+            coord=norm_points.astype(np.float32),
+            color=np.zeros_like(norm_points).astype(np.uint8),
+            feat=np.zeros_like(norm_points).astype(np.float32),
+            segment=np.zeros(norm_points.shape[0]).astype(np.int32),
+            instance=np.zeros(norm_points.shape[0]).astype(np.int32),
+            offset=np.array([norm_points.shape[0]], dtype=np.int32),
+            grid_size=0.01,
+            params=np.concatenate((normal, point)),
+        )
         
-        return normal, xyz, norm_points, center, scale
+        return save_dict
 
 # Dataset class for the cylinder regression
 class DatasetCylinder(data.Dataset):

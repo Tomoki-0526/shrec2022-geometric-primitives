@@ -78,7 +78,7 @@ You must change the input and output path inside the bash script, according to y
 
 ```bash
 python train_classification.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/ultra/classification
-python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/plane
+python train_plane.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/ptv3/plane
 python train_cylinder.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/cylinder
 python train_sphere.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/sphere
 python train_cone.py --dataset=/home/szj/SHREC2022/dataset/training --outf=/home/szj/SHREC2022/log/pointnet/cone

@@ -188,11 +188,12 @@ class DatasetPlane(data.Dataset):
             p3 = f.readline()
         
         normal = np.array([float(n1), float(n2), float(n3)])
-        xyz = np.array([float(p1), float(p2), float(p3)])
+        point = np.array([float(p1), float(p2), float(p3)])
 
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
         
-        return normal, xyz, norm_points, center, scale
+        return normal, point, norm_points
 
 # Dataset class for the cylinder regression
 class DatasetCylinder(data.Dataset):
@@ -247,23 +248,23 @@ class DatasetCylinder(data.Dataset):
             c1 = f.readline()
             c2 = f.readline()
             c3 = f.readline()
-            
         
-        target_normal = np.array([float(n1), float(n2), float(n3)])
-        target_point = np.array([float(c1), float(c2), float(c3)])
+        normal = np.array([float(n1), float(n2), float(n3)])
+        point = np.array([float(c1), float(c2), float(c3)])
         radius = np.float(radius)
 
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+        radius /= scale
         
-        return target_normal, target_point, radius, norm_points, center, scale
+        return normal, point, radius, norm_points
     
 # Dataset class for the sphere regression
 class DatasetSphere(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=True, num_classes=5):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
-        self.transform = transform
         self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
         self.filesplit = []
         
@@ -299,16 +300,6 @@ class DatasetSphere(data.Dataset):
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
         
-        #Apply a perturbation in rotation
-        if self.transform:
-            rot_x = get_rotation_x(np.deg2rad(random.uniform(25, 45)))
-            rot_y = get_rotation_y(np.deg2rad(random.uniform(25, 45)))
-            rot_z = get_rotation_z(np.deg2rad(random.uniform(25, 45)))
-            rotation_mat = np.dot(rot_x, rot_y)
-            rotation_mat = np.dot(rotation_mat, rot_z)
-        
-            pcd = add_rotation_to_pcloud(pcd, rotation_mat)
-        
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
 
@@ -322,23 +313,18 @@ class DatasetSphere(data.Dataset):
         point = np.array([float(c1), float(c2), float(c3)])
         radius = np.float(radius)
 
-        if self.transform:
-            rotation_norm = np.transpose(np.linalg.inv(rotation_mat))
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+        radius /= scale
         
-            normal = np.dot(rotation_norm, normal)
-            normal = normal/np.linalg.norm(normal)
-
-        norm_points, centerp, scale = normalize2(pcd, unit_ball=True)
-        
-        return point, radius, norm_points, centerp, scale
+        return point, radius, norm_points
 
 # Dataset class for the cone regression
 class DatasetCone(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=True, num_classes=5):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
-        self.transform = transform
         self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
         self.filesplit = []
         
@@ -374,16 +360,6 @@ class DatasetCone(data.Dataset):
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
         
-        #Apply a perturbation in rotation
-        if self.transform:
-            rot_x = get_rotation_x(np.deg2rad(random.uniform(25, 45)))
-            rot_y = get_rotation_y(np.deg2rad(random.uniform(25, 45)))
-            rot_z = get_rotation_z(np.deg2rad(random.uniform(25, 45)))
-            rotation_mat = np.dot(rot_x, rot_y)
-            rotation_mat = np.dot(rotation_mat, rot_z)
-        
-            pcd = add_rotation_to_pcloud(pcd, rotation_mat)
-        
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
 
@@ -398,26 +374,20 @@ class DatasetCone(data.Dataset):
             v3 = f.readline()
         
         normal = np.array([float(n1), float(n2), float(n3)])
-        vertex = np.array([float(v1), float(v2), float(v3)])
+        point = np.array([float(v1), float(v2), float(v3)])
         aperture = np.float(aperture)
 
-        if self.transform:
-            rotation_norm = np.transpose(np.linalg.inv(rotation_mat))
-        
-            normal = np.dot(rotation_norm, normal)
-            normal = normal/np.linalg.norm(normal)
-
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
         
-        return normal, vertex, aperture, norm_points, center, scale
+        return normal, point, aperture, norm_points
 
 # Dataset class for the torus regression
 class DatasetTorus(data.Dataset):
-    def __init__(self, root, npoints=2048, split='train', transform=True, num_classes=5):
+    def __init__(self, root, npoints=2048, split='train', num_classes=5):
         self.root = root
         self.npoints = npoints
         self.split = split
-        self.transform = transform
         self.filepaths = [os.path.normpath(fi) for fi in sorted(glob.glob(self.root+'/pointCloud/*.txt'))]
         self.filesplit = []
         
@@ -453,16 +423,6 @@ class DatasetTorus(data.Dataset):
         if self.npoints != 0:
             pcd = resample_pcd(pcd, self.npoints)
         
-        #Apply a perturbation in rotation
-        if self.transform:
-            rot_x = get_rotation_x(np.deg2rad(random.uniform(25, 45)))
-            rot_y = get_rotation_y(np.deg2rad(random.uniform(25, 45)))
-            rot_z = get_rotation_z(np.deg2rad(random.uniform(25, 45)))
-            rotation_mat = np.dot(rot_x, rot_y)
-            rotation_mat = np.dot(rotation_mat, rot_z)
-        
-            pcd = add_rotation_to_pcloud(pcd, rotation_mat)
-        
         gtfile = self.root + '/GTpointCloud/GT' + filename.split('/')[-1]
         gtfile = os.path.normpath(gtfile)
 
@@ -482,15 +442,12 @@ class DatasetTorus(data.Dataset):
         major_radius = np.float(major_radius)
         minor_radius = np.float(minor_radius)
 
-        if self.transform:
-            rotation_norm = np.transpose(np.linalg.inv(rotation_mat))
+        norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+        major_radius /= scale
+        minor_radius /= scale
         
-            normal = np.dot(rotation_norm, normal)
-            normal = normal/np.linalg.norm(normal)
-
-        norm_points, centerp, scale = normalize2(pcd, unit_ball=True)
-        
-        return normal, point, minor_radius, major_radius, norm_points, centerp, scale
+        return normal, point, minor_radius, major_radius, norm_points, center, scale
 
 # Dataset class for the cuboid regression
 class DatasetCuboid(data.Dataset):
@@ -549,15 +506,18 @@ class DatasetCuboid(data.Dataset):
             c2 = f.readline()
             c3 = f.readline()
 
-        target_axis = np.array([float(n1), float(n2), float(n3)])
-        target_uaxis = np.array([float(u1), float(u2), float(u3)])
+        normal = np.array([float(n1), float(n2), float(n3)])
+        uaxis = np.array([float(u1), float(u2), float(u3)])
         point = np.array([float(c1), float(c2), float(c3)])
         a = np.float(a)
         b = np.float(b)
 
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+        a /= scale
+        b /= scale
 
-        return target_axis, target_uaxis, point, a, b, norm_points, center, scale
+        return normal, uaxis, point, a, b, norm_points
     
 # Dataset class for the tee regression
 class DatasetTee(data.Dataset):
@@ -618,8 +578,8 @@ class DatasetTee(data.Dataset):
             v2 = f.readline()
             v3 = f.readline()
 
-        target_uaxis = np.array([float(u1), float(u2), float(u3)])
-        target_vaxis = np.array([float(v1), float(v2), float(v3)])
+        uaxis = np.array([float(u1), float(u2), float(u3)])
+        vaxis = np.array([float(v1), float(v2), float(v3)])
         point = np.array([float(c1), float(c2), float(c3)])
         ar = np.float(ar)
         br = np.float(br)
@@ -627,8 +587,13 @@ class DatasetTee(data.Dataset):
         bl = np.float(bl)
 
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+        ar /= scale
+        br /= scale
+        al /= scale
+        bl /= scale
 
-        return target_uaxis, target_vaxis, point, ar, br, al, bl, norm_points, center, scale
+        return uaxis, vaxis, point, ar, br, al, bl, norm_points
     
 # Dataset class for the cross regression
 class DatasetCross(data.Dataset):
@@ -689,8 +654,8 @@ class DatasetCross(data.Dataset):
             v2 = f.readline()
             v3 = f.readline()
 
-        target_uaxis = np.array([float(u1), float(u2), float(u3)])
-        target_vaxis = np.array([float(v1), float(v2), float(v3)])
+        uaxis = np.array([float(u1), float(u2), float(u3)])
+        vaxis = np.array([float(v1), float(v2), float(v3)])
         point = np.array([float(c1), float(c2), float(c3)])
         ar = np.float(ar)
         br = np.float(br)
@@ -698,5 +663,10 @@ class DatasetCross(data.Dataset):
         bl = np.float(bl)
 
         norm_points, center, scale = normalize2(pcd, unit_ball=True)
+        point = (point - center) / scale
+        ar /= scale
+        br /= scale
+        al /= scale
+        bl /= scale
 
-        return target_uaxis, target_vaxis, point, ar, br, al, bl, norm_points, center, scale
+        return uaxis, vaxis, point, ar, br, al, bl, norm_points

@@ -51,13 +51,13 @@ train_dataset = DatasetCone(
         root=opt.dataset,
         npoints=opt.num_points,
         split='train',
-        transform=False)
+        num_classes=8)
 
 valid_dataset = DatasetCone(
         root=opt.dataset,
         split='val',
         npoints=opt.num_points,
-        transform=False)
+        num_classes=8)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,
@@ -115,13 +115,11 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         net = net.train()
 
-        gt_normal, gt_xyz, gt_theta, input_pts, center, scale = data
+        gt_normal, gt_xyz, gt_theta, input_pts = data
         input_pts = input_pts.transpose(2, 1)
-        gt_theta, scale = gt_theta.view(-1, 1), scale.view(-1, 1)
-        input_pts, gt_normal, gt_xyz, gt_theta, center, scale = \
-            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_theta.to(device).float(), center.to(device).float(), scale.to(device).float()
-        pred_normal, pred_xyz, pred_theta = net(input_pts)
-        pred_xyz = pred_xyz * scale + center
+        gt_theta = gt_theta.view(-1, 1)
+        input_pts, gt_normal, gt_xyz, gt_theta = \
+            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_theta.to(device).float()
 
         pred = torch.cat([pred_theta, pred_normal, pred_xyz], dim=1)
         gt = torch.cat([gt_theta, gt_normal, gt_xyz], dim=1)
@@ -164,13 +162,12 @@ for epoch in range(opt.nepoch):
         net = net.eval()
 
         for i, data in enumerate(valid_loader, 0):
-            gt_normal, gt_xyz, gt_theta, input_pts, center, scale = data
+            gt_normal, gt_xyz, gt_theta, input_pts = data
             input_pts = input_pts.transpose(2, 1)
-            gt_theta, scale = gt_theta.view(-1, 1), scale.view(-1, 1)
-            input_pts, gt_normal, gt_xyz, gt_theta, center, scale = \
-                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_theta.to(device).float(), center.to(device).float(), scale.to(device).float()
+            gt_theta = gt_theta.view(-1, 1)
+            input_pts, gt_normal, gt_xyz, gt_theta = \
+                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_theta.to(device).float()
             pred_normal, pred_xyz, pred_theta = net(input_pts)
-            pred_xyz = pred_xyz * scale + center
 
             pred = torch.cat([pred_theta, pred_normal, pred_xyz], dim=1)
             gt = torch.cat([gt_theta, gt_normal, gt_xyz], dim=1)

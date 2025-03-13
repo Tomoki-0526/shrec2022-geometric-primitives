@@ -122,15 +122,12 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         net = net.train()
 
-        gt_axis, gt_uaxis, gt_point, gt_a, gt_b, input_pts, center, scale = data
+        gt_axis, gt_uaxis, gt_point, gt_a, gt_b, input_pts = data
         input_pts = input_pts.transpose(2, 1)
-        gt_a, gt_b, scale = gt_a.view(-1, 1), gt_b.view(-1, 1), scale.view(-1, 1)
-        input_pts, gt_axis, gt_uaxis, gt_point, gt_a, gt_b, center, scale = \
-            input_pts.to(device).float(), gt_axis.to(device).float(), gt_uaxis.to(device).float(), gt_point.to(device).float(), gt_a.to(device).float(), gt_b.to(device).float(), center.to(device).float(), scale.to(device).float()
+        gt_a, gt_b = gt_a.view(-1, 1), gt_b.view(-1, 1)
+        input_pts, gt_axis, gt_uaxis, gt_point, gt_a, gt_b = \
+            input_pts.to(device).float(), gt_axis.to(device).float(), gt_uaxis.to(device).float(), gt_point.to(device).float(), gt_a.to(device).float(), gt_b.to(device).float()
         pred_axis, pred_uaxis, pred_point, pred_a, pred_b = net(input_pts)
-        pred_point = pred_point * scale + center
-        pred_a = pred_a.view(-1, 1) * scale
-        pred_b = pred_b.view(-1, 1) * scale
 
         pred = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
         gt = torch.cat([gt_axis, gt_uaxis, gt_point, gt_a, gt_b], dim=1)
@@ -181,15 +178,12 @@ for epoch in range(opt.nepoch):
         net = net.eval()
 
         for i, data in enumerate(valid_loader, 0):
-            gt_axis, gt_uaxis, gt_point, gt_a, gt_b, input_pts, center, scale = data
+            gt_axis, gt_uaxis, gt_point, gt_a, gt_b, input_pts = data
             input_pts = input_pts.transpose(2, 1)
-            gt_a, gt_b, scale = gt_a.view(-1, 1), gt_b.view(-1, 1), scale.view(-1, 1)
-            input_pts, gt_axis, gt_uaxis, gt_point, gt_a, gt_b, center, scale = \
-                input_pts.to(device).float(), gt_axis.to(device).float(), gt_uaxis.to(device).float(), gt_point.to(device).float(), gt_a.to(device).float(), gt_b.to(device).float(), center.to(device).float(), scale.to(device).float()
+            gt_a, gt_b = gt_a.view(-1, 1), gt_b.view(-1, 1)
+            input_pts, gt_axis, gt_uaxis, gt_point, gt_a, gt_b = \
+                input_pts.to(device).float(), gt_axis.to(device).float(), gt_uaxis.to(device).float(), gt_point.to(device).float(), gt_a.to(device).float(), gt_b.to(device).float()
             pred_axis, pred_uaxis, pred_point, pred_a, pred_b = net(input_pts)
-            pred_point = pred_point * scale + center
-            pred_a = pred_a.view(-1, 1) * scale
-            pred_b = pred_b.view(-1, 1) * scale
 
             pred = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
             gt = torch.cat([gt_axis, gt_uaxis, gt_point, gt_a, gt_b], dim=1)

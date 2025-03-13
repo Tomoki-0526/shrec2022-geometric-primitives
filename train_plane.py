@@ -50,12 +50,14 @@ torch.manual_seed(opt.manualSeed)
 train_dataset = DatasetPlane(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train')
+        split='train',
+        num_classes=8)
 
 valid_dataset = DatasetPlane(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points)
+        npoints=opt.num_points,
+        num_classes=8)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,
@@ -107,12 +109,11 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         net = net.train()
 
-        gt_normal, gt_xyz, input_pts, center, scale = data
+        gt_normal, gt_xyz, input_pts = data
         input_pts = input_pts.transpose(2, 1)
-        input_pts, gt_normal, gt_xyz, center, scale = \
-            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), center.to(device).float(), scale.to(device).float()
+        input_pts, gt_normal, gt_xyz = \
+            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float()
         pred_normal, pred_xyz = net(input_pts)
-        pred_xyz = pred_xyz * scale.view(-1, 1) + center
 
         pred = torch.cat([pred_normal, pred_xyz], dim=1)
         gt = torch.cat([gt_normal, gt_xyz], dim=1)
@@ -145,12 +146,11 @@ for epoch in range(opt.nepoch):
         net = net.eval()
     
         for i, data in enumerate(valid_loader, 0):
-            gt_normal, gt_xyz, input_pts, center, scale = data
+            gt_normal, gt_xyz, input_pts = data
             input_pts = input_pts.transpose(2, 1)
-            input_pts, gt_normal, gt_xyz, center, scale = \
-                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), center.to(device).float(), scale.to(device).float()
+            input_pts, gt_normal, gt_xyz = \
+                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float()
             pred_normal, pred_xyz = net(input_pts)
-            pred_xyz = pred_xyz * scale + center
 
             pred = torch.cat([pred_normal, pred_xyz], dim=1)
             gt = torch.cat([gt_normal, gt_xyz], dim=1)

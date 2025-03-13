@@ -50,12 +50,14 @@ torch.manual_seed(opt.manualSeed)
 train_dataset = DatasetCylinder(
         root=opt.dataset,
         npoints=opt.num_points,
-        split='train')
+        split='train',
+        num_classes=8)
 
 valid_dataset = DatasetCylinder(
         root=opt.dataset,
         split='val',
-        npoints=opt.num_points)
+        npoints=opt.num_points,
+        num_classes=8)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,
@@ -113,14 +115,12 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         net = net.train()
 
-        gt_normal, gt_xyz, gt_radius, input_pts, center, scale = data
+        gt_normal, gt_xyz, gt_radius, input_pts = data
         input_pts = input_pts.transpose(2, 1)
-        gt_radius, scale = gt_radius.view(-1, 1), scale.view(-1, 1)
+        gt_radius = gt_radius.view(-1, 1)
         input_pts, gt_normal, gt_xyz, gt_radius, center, scale = \
-            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float(), center.to(device).float(), scale.to(device).float()
+            input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float()
         pred_normal, pred_xyz, pred_radius = net(input_pts)
-        pred_xyz = pred_xyz * scale + center
-        pred_radius = pred_radius.view(-1, 1) * scale
 
         pred = torch.cat([pred_radius, pred_normal, pred_xyz], dim=1)
         gt = torch.cat([gt_radius, gt_normal, gt_xyz], dim=1)
@@ -162,14 +162,12 @@ for epoch in range(opt.nepoch):
         net = net.eval()
     
         for i, data in enumerate(valid_loader, 0):
-            gt_normal, gt_xyz, gt_radius, input_pts, center, scale = data
+            gt_normal, gt_xyz, gt_radius, input_pts = data
             input_pts = input_pts.transpose(2, 1)
-            gt_radius, scale = gt_radius.view(-1, 1), scale.view(-1, 1)
-            input_pts, gt_normal, gt_xyz, gt_radius, center, scale = \
-                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float(), center.to(device).float(), scale.to(device).float()
+            gt_radius = gt_radius.view(-1, 1)
+            input_pts, gt_normal, gt_xyz, gt_radius = \
+                input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float()
             pred_normal, pred_xyz, pred_radius = net(input_pts)
-            pred_xyz = pred_xyz * scale + center
-            pred_radius = pred_radius.view(-1, 1) * scale
 
             pred = torch.cat([pred_radius, pred_normal, pred_xyz], dim=1)
             gt = torch.cat([gt_radius, gt_normal, gt_xyz], dim=1)

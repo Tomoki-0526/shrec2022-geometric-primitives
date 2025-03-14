@@ -8,7 +8,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetSphere
-from model.models import SphereNet
+from model.models import Regressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -78,7 +78,10 @@ try:
 except OSError:
     pass
 
-net = SphereNet()
+opt.input_dim = 3
+opt.output_dim = 4
+
+net = Regressor(opt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     net = torch.nn.DataParallel(net)
@@ -113,13 +116,10 @@ for epoch in range(opt.nepoch):
         net = net.train()
 
         gt_xyz, gt_radius, input_pts = data
-        input_pts = input_pts.transpose(2, 1)
         gt_radius = gt_radius.view(-1, 1)
         input_pts, gt_xyz, gt_radius = \
             input_pts.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float()
-        pred_xyz, pred_radius = net(input_pts)
-
-        pred = torch.cat([pred_radius, pred_xyz], dim=1)
+        pred = net(input_pts)
         gt = torch.cat([gt_radius, gt_xyz], dim=1)
 
         c_loss, r_loss = sphere_loss(pred, gt, None)
@@ -147,6 +147,8 @@ for epoch in range(opt.nepoch):
     lossTrainRadiusValues.append(m_radius_loss)
 
     # Validation after one epoch
+    best_loss = 100000
+    best_epoch = 0
     with torch.no_grad():
         m_loss = 0
         m_center_loss = 0
@@ -156,13 +158,10 @@ for epoch in range(opt.nepoch):
 
         for i, data in enumerate(valid_loader, 0):
             gt_xyz, gt_radius, input_pts = data
-            input_pts = input_pts.transpose(2, 1)
             gt_radius = gt_radius.view(-1, 1)
             input_pts, gt_xyz, gt_radius = \
                 input_pts.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float()
-            pred_xyz, pred_radius = net(input_pts)
-
-            pred = torch.cat([pred_radius, pred_xyz], dim=1)
+            pred = net(input_pts)
             gt = torch.cat([gt_radius, gt_xyz], dim=1)
 
             c_loss, r_loss = sphere_loss(pred, gt, None)
@@ -179,13 +178,17 @@ for epoch in range(opt.nepoch):
         m_center_loss /= len(valid_loader)
         m_radius_loss /= len(valid_loader)
         print(f" -------- | Validation: Total loss = {m_loss}, Center loss: {m_center_loss}, Radius loss: {m_radius_loss}")
+
+        if m_loss < best_loss:
+            best_loss = m_loss
+            best_epoch = epoch
+            torch.save(net.state_dict(), '%s/sph_model_best.pth' % (opt.outf))
         
         lossValidValues.append(m_loss)
         lossValidCenterValues.append(m_center_loss)
         lossValidRadiusValues.append(m_radius_loss)
-        
-        if epoch == opt.nepoch - 1:
-            torch.save(net.state_dict(), '%s/sph_model_%d.pth' % (opt.outf, epoch))
+
+print(f"Best epoch: {best_epoch}, Best loss: {best_loss}")
 
 vis_curve(lossTrainValues, 'sphere train loss', os.path.join(opt.outf, 'sph_train_loss.png'))
 vis_curve(lossTrainCenterValues, 'sphere train center loss', os.path.join(opt.outf, 'sph_train_center_loss.png'))

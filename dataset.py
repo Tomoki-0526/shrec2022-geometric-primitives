@@ -447,7 +447,7 @@ class DatasetTorus(data.Dataset):
         major_radius /= scale
         minor_radius /= scale
         
-        return normal, point, minor_radius, major_radius, norm_points, center, scale
+        return normal, point, minor_radius, major_radius, norm_points
 
 # Dataset class for the cuboid regression
 class DatasetCuboid(data.Dataset):

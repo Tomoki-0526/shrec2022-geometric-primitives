@@ -1,6 +1,6 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import argparse
 import random
 import torch
@@ -84,6 +84,7 @@ except OSError:
 
 opt.num_class = num_classes
 opt.input_dim = 3
+
 classifier = Classifier(opt)
 if torch.cuda.device_count() > 1:
     classifier = torch.nn.DataParallel(classifier)
@@ -134,6 +135,7 @@ for epoch in range(opt.nepoch):
     accTrain.append(m_acc / float(cont))
 
     best_acc = 0
+    best_epoch = 0
     with torch.no_grad():
         m_loss = 0
         m_acc = 0
@@ -151,15 +153,15 @@ for epoch in range(opt.nepoch):
             correct = pred_choice.eq(target.data).cpu().sum()
             acc = correct.item()/float(opt.batchSize)
             print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), acc))
-            if acc > best_acc:
-                best_acc = acc
-                torch.save(classifier.state_dict(), '%s/cls_model_best_%d.pth' % (opt.outf, epoch))
             m_loss += loss.item()
             m_acc += correct.item() / float(opt.batchSize)
             cont += 1
 
         lossValid.append(m_loss / float(cont))
         accValid.append(m_acc / float(cont))
+
+        if epoch == opt.nepoch - 1:
+            torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrain, 'classification train loss', os.path.join(opt.outf, 'cls_train_loss.png'))
 vis_curve(accTrain, 'classification train accuracy', os.path.join(opt.outf, 'cls_train_acc.png'))

@@ -8,7 +8,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCuboid
-from model.models import CuboidNet
+from model.models import Regressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -82,7 +82,10 @@ try:
 except OSError:
     pass
 
-net = CuboidNet()
+opt.input_dim = 3
+opt.output_dim = 11
+
+net = Regressor(opt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     net = torch.nn.DataParallel(net)
@@ -123,13 +126,10 @@ for epoch in range(opt.nepoch):
         net = net.train()
 
         gt_axis, gt_uaxis, gt_point, gt_a, gt_b, input_pts = data
-        input_pts = input_pts.transpose(2, 1)
         gt_a, gt_b = gt_a.view(-1, 1), gt_b.view(-1, 1)
         input_pts, gt_axis, gt_uaxis, gt_point, gt_a, gt_b = \
             input_pts.to(device).float(), gt_axis.to(device).float(), gt_uaxis.to(device).float(), gt_point.to(device).float(), gt_a.to(device).float(), gt_b.to(device).float()
-        pred_axis, pred_uaxis, pred_point, pred_a, pred_b = net(input_pts)
-
-        pred = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
+        pred = net(input_pts)
         gt = torch.cat([gt_axis, gt_uaxis, gt_point, gt_a, gt_b], dim=1)
 
         n_loss, u_loss, c_loss, a_loss, b_loss = cuboid_loss(pred, gt)
@@ -167,6 +167,8 @@ for epoch in range(opt.nepoch):
     lossTrainLengthValues.append(m_length_loss)
     lossTrainWidthValues.append(m_width_loss)
 
+    best_loss = 100000
+    best_epoch = 0
     with torch.no_grad():
         m_loss = 0
         m_axis_loss = 0
@@ -179,13 +181,10 @@ for epoch in range(opt.nepoch):
 
         for i, data in enumerate(valid_loader, 0):
             gt_axis, gt_uaxis, gt_point, gt_a, gt_b, input_pts = data
-            input_pts = input_pts.transpose(2, 1)
             gt_a, gt_b = gt_a.view(-1, 1), gt_b.view(-1, 1)
             input_pts, gt_axis, gt_uaxis, gt_point, gt_a, gt_b = \
                 input_pts.to(device).float(), gt_axis.to(device).float(), gt_uaxis.to(device).float(), gt_point.to(device).float(), gt_a.to(device).float(), gt_b.to(device).float()
-            pred_axis, pred_uaxis, pred_point, pred_a, pred_b = net(input_pts)
-
-            pred = torch.cat([pred_axis, pred_uaxis, pred_point, pred_a, pred_b], dim=1)
+            pred = net(input_pts)
             gt = torch.cat([gt_axis, gt_uaxis, gt_point, gt_a, gt_b], dim=1)
 
             n_loss, u_loss, c_loss, a_loss, b_loss = cuboid_loss(pred, gt)
@@ -212,15 +211,19 @@ for epoch in range(opt.nepoch):
         m_width_loss    /= len(valid_loader)
         print(f" --------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, UAxis loss: {m_uaxis_loss}, Vertex loss: {m_point_loss}, Length loss: {m_length_loss}, Width loss: {m_width_loss}")
 
-    lossValidValues.append(m_loss)
-    lossValidAxisValues.append(m_axis_loss)
-    lossValidUAxisValues.append(m_uaxis_loss)
-    lossValidPointValues.append(m_point_loss)
-    lossValidLengthValues.append(m_length_loss)
-    lossValidWidthValues.append(m_width_loss)
+        if m_loss < best_loss:
+            best_loss = m_loss
+            best_epoch = epoch
+            torch.save(net.state_dict(), '%s/cub_model_best.pth' % (opt.outf))
 
-    if epoch == opt.nepoch - 1:
-        torch.save(net.state_dict(), '%s/cub_model_%d.pth' % (opt.outf, epoch))
+        lossValidValues.append(m_loss)
+        lossValidAxisValues.append(m_axis_loss)
+        lossValidUAxisValues.append(m_uaxis_loss)
+        lossValidPointValues.append(m_point_loss)
+        lossValidLengthValues.append(m_length_loss)
+        lossValidWidthValues.append(m_width_loss)
+
+print(f"Best epoch: {best_epoch}, Best loss: {best_loss}")
 
 vis_curve(lossTrainValues, 'cuboid train loss', os.path.join(opt.outf, 'cub_train_loss.png'))
 vis_curve(lossTrainAxisValues, 'cuboid train axis loss', os.path.join(opt.outf, 'cub_train_axis_loss.png'))

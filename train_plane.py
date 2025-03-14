@@ -8,7 +8,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetPlane
-from model.models import PlaneNet
+from model.models import Regressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -78,7 +78,10 @@ try:
 except OSError:
     pass
 
-net = PlaneNet()
+opt.input_dim = 3
+opt.output_dim = 6
+
+net = Regressor(opt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     net = torch.nn.DataParallel(net)
@@ -110,12 +113,9 @@ for epoch in range(opt.nepoch):
         net = net.train()
 
         gt_normal, gt_xyz, input_pts = data
-        input_pts = input_pts.transpose(2, 1)
         input_pts, gt_normal, gt_xyz = \
             input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float()
-        pred_normal, pred_xyz = net(input_pts)
-
-        pred = torch.cat([pred_normal, pred_xyz], dim=1)
+        pred = net(input_pts)
         gt = torch.cat([gt_normal, gt_xyz], dim=1)
 
         a_loss, v_loss = plane_loss(pred, gt, None)
@@ -138,6 +138,8 @@ for epoch in range(opt.nepoch):
     lossTrainValues.append(m_loss)
 
     # Validation after one epoch
+    best_loss = 100000
+    best_epoch = 0
     with torch.no_grad():
         m_loss = 0
         m_xyz_loss = 0
@@ -147,12 +149,9 @@ for epoch in range(opt.nepoch):
     
         for i, data in enumerate(valid_loader, 0):
             gt_normal, gt_xyz, input_pts = data
-            input_pts = input_pts.transpose(2, 1)
             input_pts, gt_normal, gt_xyz = \
                 input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float()
-            pred_normal, pred_xyz = net(input_pts)
-
-            pred = torch.cat([pred_normal, pred_xyz], dim=1)
+            pred = net(input_pts)
             gt = torch.cat([gt_normal, gt_xyz], dim=1)
 
             # calculating the loss
@@ -168,11 +167,15 @@ for epoch in range(opt.nepoch):
         m_normal_loss /= len(valid_loader)
         m_xyz_loss /= len(valid_loader)
         print(f" -------- | Validation: Total loss = {m_loss}, Normal loss: {m_normal_loss}, Vertex loss: {m_xyz_loss}")
+
+        if m_loss < best_loss:
+            best_loss = m_loss
+            best_epoch = epoch
+            torch.save(net.state_dict(), '%s/pla_model_best.pth' % (opt.outf))
         
         lossValidValues.append(m_loss)
 
-        if epoch == opt.nepoch - 1:
-            torch.save(net.state_dict(), '%s/pla_model_%d.pth' % (opt.outf, epoch))
+print(f"Best epoch: {best_epoch}, Best loss: {best_loss}")
 
 vis_curve(lossTrainValues, 'plane train loss', os.path.join(opt.outf, 'pla_train_loss.png'))
 vis_curve(lossValidValues, 'plane validation loss', os.path.join(opt.outf, 'pla_valid_loss.png'))

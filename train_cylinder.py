@@ -8,7 +8,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetCylinder
-from model.models import CylinderNet
+from model.models import Regressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -78,7 +78,10 @@ try:
 except OSError:
     pass
 
-net = CylinderNet()
+opt.input_dim = 3
+opt.output_dim = 7
+
+net = Regressor(opt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     net = torch.nn.DataParallel(net)
@@ -116,13 +119,10 @@ for epoch in range(opt.nepoch):
         net = net.train()
 
         gt_normal, gt_xyz, gt_radius, input_pts = data
-        input_pts = input_pts.transpose(2, 1)
         gt_radius = gt_radius.view(-1, 1)
-        input_pts, gt_normal, gt_xyz, gt_radius, center, scale = \
+        input_pts, gt_normal, gt_xyz, gt_radius = \
             input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float()
-        pred_normal, pred_xyz, pred_radius = net(input_pts)
-
-        pred = torch.cat([pred_radius, pred_normal, pred_xyz], dim=1)
+        pred = net(input_pts)
         gt = torch.cat([gt_radius, gt_normal, gt_xyz], dim=1)
 
         a_loss, v_loss, r_loss = cylinder_loss(pred, gt, None)
@@ -153,6 +153,8 @@ for epoch in range(opt.nepoch):
     lossTrainRadiusValues.append(m_radius_loss)
    
     # Validation after one epoch
+    best_loss = 100000
+    best_epoch = 0
     with torch.no_grad():
         m_loss = 0
         m_axis_loss = 0
@@ -163,13 +165,10 @@ for epoch in range(opt.nepoch):
     
         for i, data in enumerate(valid_loader, 0):
             gt_normal, gt_xyz, gt_radius, input_pts = data
-            input_pts = input_pts.transpose(2, 1)
             gt_radius = gt_radius.view(-1, 1)
             input_pts, gt_normal, gt_xyz, gt_radius = \
                 input_pts.to(device).float(), gt_normal.to(device).float(), gt_xyz.to(device).float(), gt_radius.to(device).float()
-            pred_normal, pred_xyz, pred_radius = net(input_pts)
-
-            pred = torch.cat([pred_radius, pred_normal, pred_xyz], dim=1)
+            pred = net(input_pts)
             gt = torch.cat([gt_radius, gt_normal, gt_xyz], dim=1)
 
             a_loss, v_loss, r_loss = cylinder_loss(pred, gt, None)
@@ -189,14 +188,18 @@ for epoch in range(opt.nepoch):
         m_vertex_loss /= len(valid_loader)
         m_radius_loss /= len(valid_loader)
         print(f" -------- | Validation: Total loss = {m_loss}, Axis loss: {m_axis_loss}, Vertex loss: {m_vertex_loss}, Radius loss: {m_radius_loss}")
+
+        if m_loss < best_loss:
+            best_loss = m_loss
+            best_epoch = epoch
+            torch.save(net.state_dict(), '%s/cyl_model_best.pth' % (opt.outf))
         
         lossValidValues.append(m_loss)
         lossValidAxisValues.append(m_axis_loss)
         lossValidVertexValues.append(m_vertex_loss)
         lossValidRadiusValues.append(m_radius_loss)
 
-        if epoch == opt.nepoch - 1:
-            torch.save(net.state_dict(), '%s/cyl_model_%d.pth' % (opt.outf, epoch))
+print(f"Best epoch: {best_epoch}, Best loss: {best_loss}")
 
 vis_curve(lossTrainValues, 'cylinder train loss', os.path.join(opt.outf, 'cyl_train_loss.png'))
 vis_curve(lossTrainAxisValues, 'cylinder train axis loss', os.path.join(opt.outf, 'cyl_train_axis_loss.png'))

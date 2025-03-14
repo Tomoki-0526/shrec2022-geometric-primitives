@@ -8,7 +8,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 from dataset import DatasetTee
-from model.models import TeeNet
+from model.models import Regressor
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -82,7 +82,10 @@ try:
 except OSError:
     pass
 
-net = TeeNet()
+opt.input_dim = 3
+opt.output_dim = 13
+
+net = Regressor(opt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     net = torch.nn.DataParallel(net)
@@ -130,13 +133,10 @@ for epoch in range(opt.nepoch):
         net = net.train()
 
         gt_uaxis, gt_vaxis, gt_point, gt_ar, gt_br, gt_al, gt_bl, input_pts = data
-        input_pts = input_pts.transpose(2, 1)
         gt_ar, gt_br, gt_al, gt_bl = gt_ar.view(-1, 1), gt_br.view(-1, 1), gt_al.view(-1, 1), gt_bl.view(-1, 1)
         input_pts, gt_uaxis, gt_vaxis, gt_point, gt_ar, gt_br, gt_al, gt_bl = \
             input_pts.to(device).float(), gt_uaxis.to(device).float(), gt_vaxis.to(device).float(), gt_point.to(device).float(), gt_ar.to(device).float(), gt_br.to(device).float(), gt_al.to(device).float(), gt_bl.to(device).float()
-        pred_uaxis, pred_vaxis, pred_point, pred_ar, pred_br, pred_al, pred_bl = net(input_pts)
-
-        pred = torch.cat([pred_uaxis, pred_vaxis, pred_point, pred_ar, pred_br, pred_al, pred_bl], dim=1)
+        pred = net(input_pts)
         gt = torch.cat([gt_uaxis, gt_vaxis, gt_point, gt_ar, gt_br, gt_al, gt_bl], dim=1)
 
         u_loss, v_loss, c_loss, ar_loss, br_loss, al_loss, bl_loss = tee_loss(pred, gt)
@@ -182,6 +182,8 @@ for epoch in range(opt.nepoch):
     lossTrainMainLengthValues.append(m_main_length_loss)
     lossTrainViceLengthValues.append(m_vice_length_loss)
 
+    best_loss = 100000
+    best_epoch = 0
     with torch.no_grad():
         m_loss = 0
         m_uaxis_loss = 0
@@ -196,13 +198,10 @@ for epoch in range(opt.nepoch):
 
         for i, data in enumerate(valid_loader, 0):
             gt_uaxis, gt_vaxis, gt_point, gt_ar, gt_br, gt_al, gt_bl, input_pts = data
-            input_pts = input_pts.transpose(2, 1)
             gt_ar, gt_br, gt_al, gt_bl = gt_ar.view(-1, 1), gt_br.view(-1, 1), gt_al.view(-1, 1), gt_bl.view(-1, 1)
             input_pts, gt_uaxis, gt_vaxis, gt_point, gt_ar, gt_br, gt_al, gt_bl = \
                 input_pts.to(device).float(), gt_uaxis.to(device).float(), gt_vaxis.to(device).float(), gt_point.to(device).float(), gt_ar.to(device).float(), gt_br.to(device).float(), gt_al.to(device).float(), gt_bl.to(device).float()
-            pred_uaxis, pred_vaxis, pred_point, pred_ar, pred_br, pred_al, pred_bl = net(input_pts)
-
-            pred = torch.cat([pred_uaxis, pred_vaxis, pred_point, pred_ar, pred_br, pred_al, pred_bl], dim=1)
+            pred = net(input_pts)
             gt = torch.cat([gt_uaxis, gt_vaxis, gt_point, gt_ar, gt_br, gt_al, gt_bl], dim=1)
 
             u_loss, v_loss, c_loss, ar_loss, br_loss, al_loss, bl_loss = tee_loss(pred, gt)
@@ -235,17 +234,21 @@ for epoch in range(opt.nepoch):
         m_vice_length_loss /= len(valid_loader)
         print(f" -------- | Validation: Total loss = {m_loss}, UAxis loss: {m_uaxis_loss}, VAxis loss: {m_vaxis_loss}, Point loss: {m_point_loss}, Main Radius loss: {m_main_radius_loss}, Vice Radius loss: {m_vice_radius_loss}, Main Length Loss: {m_main_length_loss}, Vice Length loss: {m_vice_length_loss}")
 
-    lossValidValues.append(m_loss)
-    lossValidUAxisValues.append(m_uaxis_loss)
-    lossValidVAxisValues.append(m_vaxis_loss)
-    lossValidPointValues.append(m_point_loss)
-    lossValidMainRadiusValues.append(m_main_radius_loss)
-    lossValidViceRadiusValues.append(m_vice_radius_loss)
-    lossValidMainLengthValues.append(m_main_length_loss)
-    lossValidViceLengthValues.append(m_vice_length_loss)
+        if m_loss < best_loss:
+            best_loss = m_loss
+            best_epoch = epoch
+            torch.save(net.state_dict(), '%s/tee_model_best.pth' % (opt.outf))
 
-    if epoch == opt.nepoch - 1:
-        torch.save(net.state_dict(), '%s/tee_model_%d.pth' % (opt.outf, epoch))
+        lossValidValues.append(m_loss)
+        lossValidUAxisValues.append(m_uaxis_loss)
+        lossValidVAxisValues.append(m_vaxis_loss)
+        lossValidPointValues.append(m_point_loss)
+        lossValidMainRadiusValues.append(m_main_radius_loss)
+        lossValidViceRadiusValues.append(m_vice_radius_loss)
+        lossValidMainLengthValues.append(m_main_length_loss)
+        lossValidViceLengthValues.append(m_vice_length_loss)
+
+print(f"Best epoch: {best_epoch}, Best loss: {best_loss}")
 
 vis_curve(lossTrainValues, 'tee train loss', os.path.join(opt.outf, 'tee_train_loss.png'))
 vis_curve(lossTrainUAxisValues, 'tee train u axis loss', os.path.join(opt.outf, 'tee_train_uaxis_loss.png'))

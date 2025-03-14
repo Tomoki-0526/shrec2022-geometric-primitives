@@ -1,6 +1,6 @@
 from __future__ import print_function
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
 import argparse
 import random
 import torch
@@ -13,6 +13,11 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from losses import PlaneLoss
+
+from functools import partial
+from pointcept.engines.defaults import worker_init_fn
+from pointcept.datasets import point_collate_fn
+import pointcept.utils.comm as comm
 
 def vis_curve(curve, title, filename):
     plt.clf()
@@ -58,6 +63,17 @@ valid_dataset = DatasetPlane(
         split='val',
         npoints=opt.num_points,
         num_classes=8)
+
+init_fn = (
+    partial(
+        worker_init_fn,
+        num_workers=opt.workers,
+        rank=comm.get_rank(),
+        seed=opt.manualSeed,
+    )
+    if opt.manualSeed is not None
+    else None
+)
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset,

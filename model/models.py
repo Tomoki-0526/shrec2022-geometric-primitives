@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from model.dgcnn import DGCNNEmbedding
 from model.pointnet import PointNetfeat
+from model.pointtransformer import PointTransformerV3
 
 
 class Classifier(nn.Module):
@@ -21,23 +22,16 @@ class Classifier(nn.Module):
 class PlaneNet(nn.Module):
     def __init__(self):
         super(PlaneNet, self).__init__()
-        self.feat = PointNetfeat(global_feat=True, feature_transform=False)
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 3) #Normal
-        self.fc4 = nn.Linear(256, 3) #Point
-        self.dropout = nn.Dropout(p=0.3)
-        self.bn1 = nn.BatchNorm1d(512)
-        self.bn2 = nn.BatchNorm1d(256)
-        self.tanh = nn.Tanh()
+        self.feat = PointTransformerV3(
+            in_channels=3,
+            cls_mode=True,
+        )
+        self.fc = nn.Linear(64, 6)
         
-    def forward(self, x):
-        x, trans, trans_feat = self.feat(x)
-        x = F.relu(self.bn1(self.fc1(x)))
-        x = F.relu(self.bn2(self.dropout(self.fc2(x))))
-        normal = self.fc3(x)
-        point = self.fc4(x)
-        return normal, point
+    def forward(self, data_dict):
+        x = self.feat(data_dict)
+        pred = self.fc(x)
+        return pred
 
 
 class CylinderNet(nn.Module):

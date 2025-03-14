@@ -2,17 +2,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 from model.dgcnn import DGCNNEmbedding
 from model.pointnet import PointNetfeat
+from model.ptv1 import PointTransformerCls
 
 
 class Classifier(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, cfg):
         super(Classifier, self).__init__()
-        self.embedding = DGCNNEmbedding()
-        self.fc = nn.Linear(256, num_classes)
+        self.cls = PointTransformerCls(cfg)
 
     def forward(self, x):
-        x = self.embedding(x)
-        x = self.fc(x)
+        x = self.cls(x)
         x = F.log_softmax(x, -1)
 
         return x

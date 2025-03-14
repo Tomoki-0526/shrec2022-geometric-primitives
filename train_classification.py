@@ -82,7 +82,9 @@ try:
 except OSError:
     pass
 
-classifier = Classifier(num_classes=num_classes)
+opt.num_class = num_classes
+opt.input_dim = 3
+classifier = Classifier(opt)
 if torch.cuda.device_count() > 1:
     classifier = torch.nn.DataParallel(classifier)
     print(f'Let\'s use {torch.cuda.device_count()} gpus!')
@@ -112,7 +114,6 @@ for epoch in range(opt.nepoch):
         classifier = classifier.train()
 
         target, points = data
-        points = points.transpose(2, 1)
         points, target = points.cuda().float(), target.cuda()
         pred = classifier(points)
 
@@ -132,6 +133,7 @@ for epoch in range(opt.nepoch):
     lossTrain.append(m_loss / float(cont))
     accTrain.append(m_acc / float(cont))
 
+    best_acc = 0
     with torch.no_grad():
         m_loss = 0
         m_acc = 0
@@ -141,23 +143,23 @@ for epoch in range(opt.nepoch):
         cont = 0
         for i,data in enumerate(valid_loader, 0):
             target, points = data
-            points = points.transpose(2, 1)
             points, target = points.cuda().float(), target.cuda()
             
             pred = classifier(points)
             loss = F.nll_loss(pred, target)
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
-            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
+            acc = correct.item()/float(opt.batchSize)
+            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), acc))
+            if acc > best_acc:
+                best_acc = acc
+                torch.save(classifier.state_dict(), '%s/cls_model_best_%d.pth' % (opt.outf, epoch))
             m_loss += loss.item()
             m_acc += correct.item() / float(opt.batchSize)
             cont += 1
 
         lossValid.append(m_loss / float(cont))
         accValid.append(m_acc / float(cont))
-
-        if epoch == opt.nepoch - 1:
-            torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 vis_curve(lossTrain, 'classification train loss', os.path.join(opt.outf, 'cls_train_loss.png'))
 vis_curve(accTrain, 'classification train accuracy', os.path.join(opt.outf, 'cls_train_acc.png'))

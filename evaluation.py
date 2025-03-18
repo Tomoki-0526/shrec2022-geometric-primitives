@@ -53,11 +53,13 @@ input_pts, center, scale = normalize2(pcd, unit_ball=True)
 #print(f'Center:{center}, Scale: {scale}')
 input_pts = torch.unsqueeze(torch.from_numpy(input_pts), 0)
 
-classifier = torch.nn.DataParallel(Classifier(num_classes=8))
-classifier.load_state_dict(torch.load('/home/szj/SHREC2022/log/ultra/classification/cls_model_249.pth'))
+opt.num_class = 8
+opt.input_dim = 3
+
+classifier = Classifier(opt)
+classifier.load_state_dict(torch.load('/home/szj/SHREC2022/log/ptv1/classification/cls_model_249.pth'))
 classifier.cuda()
 
-input_pts = input_pts.transpose(2, 1)
 input_pts = input_pts.cuda().float()
 classifier = classifier.eval()
 pred = classifier(input_pts)
@@ -70,12 +72,14 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
 
     if pred_choice==0: #Plane
         #print('Shape is a plane')
-        network = PlaneNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/plane/pla_model_249.pth"))
+        opt.output_dim = 6
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/plane/pla_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point = network(input_pts)
+        pred = network(input_pts)
+        pred_normal, pred_point = pred[:, :3], pred[:, 3:]
     
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -95,12 +99,14 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}')
     elif pred_choice==1: #Cylinder
         #print('Shape is a cylinder')
-        network = CylinderNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/cylinder/cyl_model_249.pth"))
+        opt.output_dim = 7
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/cylinder/cyl_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point, pred_radius = network(input_pts)
+        pred = network(input_pts)
+        pred_radius, pred_normal, pred_point = pred[:, :1], pred[:, 1:4], pred[:, 4:]
 
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -123,12 +129,14 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_radius}')
     elif pred_choice==2: #Sphere
         #print('Shape is a sphere')
-        network = SphereNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/sphere/sph_model_249.pth"))
+        opt.output_dim = 4
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/sphere/sph_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-        pred_point, pred_radius = network(input_pts)
+        pred = network(input_pts)
+        pred_radius, pred_point = pred[:, :1], pred[:, 1:]
 
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
         pred_radius = torch.squeeze(pred_radius).cpu().detach().numpy()
@@ -144,12 +152,14 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_point}->{pred_radius}')
     elif pred_choice==3: #Cone
         #print('Shape is a cone')
-        network = ConeNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/cone/con_model_249.pth"))
+        opt.output_dim = 7
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/cone/con_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point, pred_aperture = network(input_pts)
+        pred = network(input_pts)
+        pred_aperture, pred_normal, pred_point = pred[:, :1], pred[:, 1:4], pred[:, 4:]
 
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -170,12 +180,14 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_aperture}')
     elif pred_choice==4: # Torus
         #print('Shape is a torus')
-        network = TorusNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/torus/tor_model_249.pth"))
+        opt.output_dim = 8
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/torus/tor_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-        pred_normal, pred_point, pred_min, pred_max = network(input_pts)
+        pred = network(input_pts)
+        pred_max, pred_min, pred_normal, pred_point = pred[:, :1], pred[:, 1:2], pred[:, 2:5], pred[:, 5:]
 
         pred_normal = torch.squeeze(pred_normal).cpu().detach().numpy()
         pred_point = torch.squeeze(pred_point).cpu().detach().numpy()
@@ -200,12 +212,14 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         #print(f'Parameters: {pred_normal}->{pred_point}->{pred_min}->{pred_max}')
 
     elif pred_choice == 5:  # cuboid
-        network = CuboidNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/cuboid/cub_model_249.pth"))
+        opt.output_dim = 11
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/cuboid/cub_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-        pred_axis, pred_uaxis, pred_point, pred_length, pred_width = network(input_pts)
+        pred = network(input_pts)
+        pred_axis, pred_uaxis, pred_point, pred_length, pred_width = pred[:, :3], pred[:, 3:6], pred[:, 6:9], pred[:, 9:10], pred[:, 10:11]
 
         pred_axis = torch.squeeze(pred_axis).cpu().detach().numpy()
         pred_uaxis = torch.squeeze(pred_uaxis).cpu().detach().numpy()
@@ -232,13 +246,15 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         f.write(str(pred_point[2])+'\n')
 
     elif pred_choice == 6:  # tee
-        network = TeeNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/tee/tee_model_249.pth"))
+        opt.output_dim = 13
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/tee/tee_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-
-        pred_uaxis, pred_vaxis, pred_point, pred_main_radius, pred_vice_radius, pred_main_length, pred_vice_length = network(input_pts)
+        pred = network(input_pts)
+        pred_uaxis, pred_vaxis, pred_point, pred_main_radius, pred_vice_radius, pred_main_length, pred_vice_length = \
+            pred[:, :3], pred[:, 3:6], pred[:, 6:9], pred[:, 9:10], pred[:, 10:11], pred[:, 11:12], pred[:, 12:13]
 
         pred_uaxis = torch.squeeze(pred_uaxis).cpu().detach().numpy()
         pred_vaxis = torch.squeeze(pred_vaxis).cpu().detach().numpy()
@@ -271,13 +287,15 @@ with open(os.path.join(opt.outf, output_filename), 'wt') as f:
         f.write(str(pred_vaxis[2])+'\n')
 
     elif pred_choice == 7:  # cross
-        network = CrossNet()
-        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/pointnet/cross/xos_model_249.pth"))
+        opt.output_dim = 13
+        network = Regressor(opt)
+        network.load_state_dict(torch.load("/home/szj/SHREC2022/log/ptv1/cross/xos_model_best.pth"))
         network.cuda()
 
         network = network.eval()
-
-        pred_uaxis, pred_vaxis, pred_point, pred_main_radius, pred_vice_radius, pred_main_length, pred_vice_length = network(input_pts)
+        pred = network(input_pts)
+        pred_uaxis, pred_vaxis, pred_point, pred_main_radius, pred_vice_radius, pred_main_length, pred_vice_length = \
+            pred[:, :3], pred[:, 3:6], pred[:, 6:9], pred[:, 9:10], pred[:, 10:11], pred[:, 11:12], pred[:, 12:13]
 
         pred_uaxis = torch.squeeze(pred_uaxis).cpu().detach().numpy()
         pred_vaxis = torch.squeeze(pred_vaxis).cpu().detach().numpy()
